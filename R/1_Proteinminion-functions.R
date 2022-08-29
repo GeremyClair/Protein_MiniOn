@@ -1,17 +1,3 @@
-#' GO_details()
-#' @description Retrieve GO_details from the GO.db from Bioconductor
-#' @return a df containing the following details : GO.ID, Description, and GO.ontology.type
-#' @examples GO_details<-GO_details()
-#' @examples GO_details
-GO_details<-function(){
-  if(!"GO.db" %in% rownames(installed.packages())){stop("The package 'GO.db' is required to execute this function")}
-  if(!"GO.db" %in% (.packages())){library("GO.db")}
-
-GO_details = select(GO.db, keys(GO.db, "GOID"), c("TERM", "ONTOLOGY"),)
-colnames(GO_details)<-c("GO.ID","Description","GO.ontology.type")
-GO_details
-}
-
 #' download_UniProtTable()
 #' @description Retrieve UniProt info for the proteins of a given organism.
 #' @param organismID Should be a UniProt organism ID, by default Homo sapiens will be used ("9606").
@@ -28,40 +14,46 @@ download_UniProtTable<- function(organismID="9606",proteomeID="proteomeID",revie
   if(missing(organismID)&missing(proteomeID)){warning("The 'organismID' and 'proteomeID' were left empty, 'homo sapiens' (9006) will be used by default")
     organismID<-"9606"}
   if(missing(reviewed)){reviewed<-FALSE}
-  if(missing(reviewed)){reviewed<-FALSE}
-  if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
+  if(!is.logical(reviewed)){warning("<reviewed> should be either TRUE or FALSE, by default reviewed=FALSE was used")
+    reviewed<- FALSE}
   if(missing(export)){export<-FALSE}
   if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
-  if(missing(file)){file=paste0("UniProtTable_OrganismID_",organismID,"_",format(Sys.time(),"%b_%d_%Y"),".txt")}
+  if(missing(file)){file=paste0("UniProtFasta_OrganismID_",organismID,"_",format(Sys.time(),"%b_%d_%Y"),".fasta")}
 
+  URL<-"https://rest.uniprot.org/uniprotkb/stream?compressed=false"
 
-  #Base URL
-  URL<-"http://www.uniprot.org/uniprot/?query="
-  #reviewed?
-  if(reviewed==TRUE){URL<-paste0(URL,"reviewed:yes+AND+")}
-  #organismID
-  if(!missing(organismID)){
-    URL<-paste0(URL,"organism:",organismID)
-    if(!missing(proteomeID)){URL<-paste0(URL,"+AND+")}
+  #query type
+  URL<-paste0(URL,"&fields=accession%2Cid%2Cprotein_name%2Cgene_names%2Corganism_name%2Clength%2Cgo_p%2Cgo_c%2Cgo_f%2Cgo%2Cgo_id%2Cxref_kegg%2Cxref_reactome")
+  URL<-paste0(URL,"&format=tsv&query=")
+
+  # organism ID or proteome ID missing
+  if(missing(organismID)&missing(proteomeID)){
+    warning("Both the OrganismID and the ProteomeID were missing, the human proteome was used")
+    URL<-paste0(URL,"%28","organism_id%3A","9606","%29")
+  }else{
+    if(missing(organismID)==FALSE & missing(proteomeID)==FALSE){
+      warning("Both the OrganismID and the ProteomeID were filled, ONLY the OrganismID will be used")
+      URL<-paste0(URL,"%28","organism_id%3A",organismID,"%29")
+    }else{
+      if(!missing(organismID)){URL<-paste0(URL,"%28","organism_id%3A",organismID,"%29")}
+      if(!missing(proteomeID)){URL<-paste0(URL,"%28","proteome%3A",proteomeID,"%29")}
+    }
   }
-  #proteomeID
-  if(!missing(proteomeID)){
-    URL<-paste0(URL,"proteome:",proteomeID)}
-    #query type
-    URL<-paste0(URL,"&columns=id,entry%20name,genes,reviewed,go,organism,database(refseq),database(KEGG),database(GeneID)&format=tab")
+
+  #reviewed?
+  if(reviewed==TRUE){URL<-paste0(URL,"%20","AND","%20","%28","reviewed","%3A","true","%29")}
 
   #read the table from the internet
   UniProtTable<-read.csv(URL,sep="\t",header=T)
 
   #Adjust column names
-  colnames(UniProtTable)<-c("Uniprot_Accession", "Uniprot_ID", "Gene_Name", "Status", "GO_List", "Organism", "Crossref_RefSeq","Crossref_KEGG", "Crossref_geneID")
+  colnames(UniProtTable)<-c("Uniprot_Accession", "Uniprot_ID","Description", "Gene_Name", "Organism", "Length", "GO_BP", "GO_CC","GO_MF","GO_List","GO_IDs","Crossref_KEGG","Reactome_List")
 
   #export the global environment
   UniProtTable<<-UniProtTable
 
   if(export==TRUE){
     save(UniProtTable,file = file)
-    #write.table(UniProtTable,file = file, row.names = FALSE, col.names = TRUE, quote=FALSE, sep="\t")
   }
 
 }
@@ -89,30 +81,36 @@ download_UniProtFasta<-function(organismID="9606", proteomeID="proteomeID", revi
   if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
   if(missing(file)){file=paste0("UniProtFasta_OrganismID_",organismID,"_",format(Sys.time(),"%b_%d_%Y"),".fasta")}
 
-  #Base URL
-  URL<-"http://www.uniprot.org/uniprot/?query="
-  #reviewed?
-  if(reviewed==TRUE){URL<-paste0(URL,"reviewed:yes+AND+")}
-  #organism ID ?
-  if(!missing(organismID)){
-    URL<-paste0(URL,"organism:",organismID)
-    if(!missing(proteomeID)){URL<-paste0(URL,"+AND+")}
-  }
-  #proteome
-  if(!missing(proteomeID)){
-    URL<-paste0(URL,"proteome:",proteomeID)}
+  URL<-"https://rest.uniprot.org/uniprotkb/stream?compressed=false"
 
-     #query type
-  URL<-paste0(URL,"&format=fasta")
+  #query type
+  URL<-paste0(URL,"&format=fasta&query=")
+
+  # organism ID or proteome ID missing
+  if(missing(organismID)&missing(proteomeID)){
+    warning("Both the OrganismID and the ProteomeID were missing, the human proteome was used")
+    URL<-paste0(URL,"%28","organism_id%3A","9606","%29")
+  }else{
+    if(missing(organismID)==FALSE & missing(proteomeID)==FALSE){
+    warning("Both the OrganismID and the ProteomeID were filled, ONLY the OrganismID will be used")
+      URL<-paste0(URL,"%28","organism_id%3A",organismID,"%29")
+    }else{
+      if(!missing(organismID)){URL<-paste0(URL,"%28","organism_id%3A",organismID,"%29")}
+      if(!missing(proteomeID)){URL<-paste0(URL,"%28","proteome%3A",proteomeID,"%29")}
+    }
+  }
+
+  #reviewed?
+  if(reviewed==TRUE){URL<-paste0(URL,"%20","AND","%20","%28","reviewed","%3A","true","%29")}
 
   #read the table from the internet
-  UniProtFasta<-read.csv(URL,sep="\t",header=F)
+  f<-read.csv(URL,sep="\t",header=F)
 
   #print your fasta file number of sequences
-  print(paste("The UniProtFasta generated contains",sum(grepl(">",as.character(t(UniProtFasta)))),"sequences"))
+  print(paste("The UniProtFasta generated contains",sum(grepl(">",as.character(t(f)))),"sequences"))
 
   #export the global environment
-  UniProtFasta<<-UniProtFasta
+  UniProtFasta<<-f
 
   #write fasta file if export=TRUE
   if(export==TRUE){
@@ -187,95 +185,126 @@ UniprotFastaParser<-function(file="file.fasta"){
 #' @examples generate_UniProtTable_GO(organismID="9606",reviewed=TRUE,preloaded_UniProtTable=TRUE,export=TRUE,file="UniProtTable_GO_organismID_date.rda")
 #'
 generate_UniProtTable_GO<- function(organismID="9606",reviewed=TRUE,preloaded_UniProtTable=TRUE,export=FALSE,file="UniProtTable_GO_organismID_date.rda"){
-  #general checkings
-  if(missing(organismID)){organismID<-"9606"}
-  if(missing(reviewed)){reviewed<-TRUE}
-  if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
   if(missing(preloaded_UniProtTable)){preloaded_UniProtTable<-TRUE}
   if(!is.logical(preloaded_UniProtTable)){stop("<preloaded_UniProtTable> should be either TRUE or FALSE")}
-  if(missing(export)){export<-FALSE}
-  if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
-  if(missing(file)){file=paste0("UniProtTable_GO_OrganismID_",organismID,"_",format(Sys.time(),"%b_%d_%Y"),".txt")}
-
-
-  #if the object UniProtTable already exists, use it only if preloaded_UniProtTable is TRUE
   if(preloaded_UniProtTable==TRUE&&exists("UniProtTable")){
     UPT<- UniProtTable
   }else{
+    #general checking
+    if(missing(organismID)&missing(proteomeID)){warning("The 'organismID' and 'proteomeID' were left empty, 'homo sapiens' (9006) will be used by default")
+      organismID<-"9606"}
+    if(missing(reviewed)){reviewed<-FALSE}
+    if(!is.logical(reviewed)){warning("<reviewed> should be either TRUE or FALSE, by default reviewed=FALSE was used")
+      reviewed<- FALSE}
+    if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
+    #download the table
     download_UniProtTable(organismID=organismID, reviewed=reviewed)
     UPT<-UniProtTable
   }
 
   #extract the required columns from the UniProtTable (UPT) and ensure the content is considered as character by R
-  UPT<-UPT[,c(1,2,5)]
-  for(i in 1:3){
+  UPT<-UPT[,colnames(UPT) %in% c("Uniprot_Accession","Uniprot_ID","GO_BP","GO_CC","GO_MF")]
+
+  for(i in 1:5){
     UPT[,i]<-as.character(t(UPT[,i]))
   }
 
   #remove the end bracket
   UPT[,3]<- gsub("\\]","",UPT[,3])
+  UPT[,4]<- gsub("\\]","",UPT[,4])
+  UPT[,5]<- gsub("\\]","",UPT[,5])
 
   #create a list to store the different GO terms associated with each protein
-  uniList<-list()
+  uniList_BP<-list()
+  uniList_CC<-list()
+  uniList_MF<-list()
+
   #create objects to store the Uniprot_accession and the Uniprot_ID
-  Uniprot_Accession<-character()
-  Uniprot_ID<-character()
+  Uniprot_Accession_BP<-character()
+  Uniprot_Accession_CC<-character()
+  Uniprot_Accession_MF<-character()
+
+  Uniprot_ID_BP<-character()
+  Uniprot_ID_CC<-character()
+  Uniprot_ID_MF<-character()
 
   #fill the three objects created above
   for (i in 1:nrow(UPT)){
-    uniList[[i]]<-trimws(unlist(strsplit(UPT[i,3],";")))
-    Uniprot_Accession<-c(Uniprot_Accession,rep(UPT[i,1],length(uniList[[i]])))
-    Uniprot_ID<-c(Uniprot_ID,rep(UPT[i,2],length(uniList[[i]])))
-    }
+    uniList_BP[[i]]<-trimws(unlist(strsplit(UPT[i,3],";")))
+    Uniprot_Accession_BP<-c(Uniprot_Accession_BP,rep(UPT[i,1],length(uniList_BP[[i]])))
+    Uniprot_ID_BP<-c(Uniprot_ID_BP,rep(UPT[i,2],length(uniList_BP[[i]])))
+  }
 
-  #create the Data frame containing these details
-  UniProtTable_GO<-data.frame(Uniprot_Accession=Uniprot_Accession, Uniprot_ID=Uniprot_ID, GO=unlist(uniList))
+  for (i in 1:nrow(UPT)){
+    uniList_CC[[i]]<-trimws(unlist(strsplit(UPT[i,4],";")))
+    Uniprot_Accession_CC<-c(Uniprot_Accession_CC,rep(UPT[i,1],length(uniList_CC[[i]])))
+    Uniprot_ID_CC<-c(Uniprot_ID_CC,rep(UPT[i,2],length(uniList_CC[[i]])))
+  }
 
-  #split the last column using the "[GO"
-  UniProtTable_GO <- UniProtTable_GO %>% separate(GO, into= c('GO_description','GO_accession'),"\\[GO\\:" )
+  for (i in 1:nrow(UPT)){
+    uniList_MF[[i]]<-trimws(unlist(strsplit(UPT[i,5],";")))
+    Uniprot_Accession_MF<-c(Uniprot_Accession_MF,rep(UPT[i,1],length(uniList_MF[[i]])))
+    Uniprot_ID_MF<-c(Uniprot_ID_MF,rep(UPT[i,2],length(uniList_MF[[i]])))
+  }
+
+  #create the Data frames containing these details
+  UniProtTable_GO_BP<-data.frame(Uniprot_Accession=Uniprot_Accession_BP, Uniprot_ID=Uniprot_ID_BP, GO=unlist(uniList_BP))
+  UniProtTable_GO_BP<-cbind(UniProtTable_GO_BP,GO_type="GO_BP")
+  UniProtTable_GO_BP <- UniProtTable_GO_BP %>% separate(GO, into= c('GO_description','GO_accession'),"\\[GO\\:" )
+
+  UniProtTable_GO_CC<-data.frame(Uniprot_Accession=Uniprot_Accession_CC, Uniprot_ID=Uniprot_ID_CC, GO=unlist(uniList_CC))
+  UniProtTable_GO_CC<-cbind(UniProtTable_GO_CC,GO_type="GO_CC")
+  UniProtTable_GO_CC <- UniProtTable_GO_CC %>% separate(GO, into= c('GO_description','GO_accession'),"\\[GO\\:" )
+
+  UniProtTable_GO_MF<-data.frame(Uniprot_Accession=Uniprot_Accession_MF, Uniprot_ID=Uniprot_ID_MF, GO=unlist(uniList_MF))
+  UniProtTable_GO_MF<-cbind(UniProtTable_GO_MF,GO_type="GO_MF")
+  UniProtTable_GO_MF <- UniProtTable_GO_MF %>% separate(GO, into= c('GO_description','GO_accession'),"\\[GO\\:" )
+
+  UniProtTable_GO<-rbind(UniProtTable_GO_BP,UniProtTable_GO_CC,UniProtTable_GO_MF)
+
 
   #Place the reordered table in the Global Environment
-  UniProtTable_GO <<- UniProtTable_GO[,c(1,2,4,3)]
+  UniProtTable_GO <<- UniProtTable_GO[,c(1,2,4,3,5)]
 
   #export file if export==TRUE
   if(export==TRUE){
     save(UniProtTable_GO,file = file)
-  }
-
+     }
   }
 
 #' generate_UniProtTable_KEGG()
-#' @description Retrieve UniProt GOterms for the proteins of a given organism
+#' @description Retrieve UniProt KEGG pathways for the proteins of a given organism
 #' @param organismID Should be a UniProt organism ID, by default Homo sapiens will be used ("9606")
 #' @param reviewed this indicate if the proteins extracted have to be reviewed or not (typically the ones present on swissProt), by default TRUE (the non reviewed proteins are discarded)
-#' @param preloaded_UniProtTable this indicate wether or not the preloaded UniProtTable and UniProtTable_GO should be used, if FALSE the UniProtTable and UniProtTable_GO will be generated again
+#' @param preloaded_UniProtTable this indicate whether or not the preloaded UniProtTable and UniProtTable_GO should be used, if FALSE the UniProtTable and UniProtTable_GO will be generated again
 #'
 #' @return This function generate a KEGG enrichment table named UniProtTable_KEGG usable with the enrichment functions Uniprot_KEGG_*. If the export is set on, the UniProtTable_KEGG will also be saved in the .rda format at the specified location.
 #'
 #' @examples generate_UniProtTable_KEGG(organismID="9606",reviewed=TRUE,preloaded_UniProtTable=TRUE,export=FALSE,file="UniProtTable_KEGG_organismID_date.rda")
 #'
 generate_UniProtTable_KEGG<- function(organismID="9606",reviewed=TRUE,preloaded_UniProtTable=TRUE,export=FALSE,file="UniProtTable_KEGG_organismID_date.rda"){
-  #general checkings
-  if(missing(organismID)){organismID<-"9606"}
-  if(missing(reviewed)){reviewed<-TRUE}
-  if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
   if(missing(preloaded_UniProtTable)){preloaded_UniProtTable<-TRUE}
   if(!is.logical(preloaded_UniProtTable)){stop("<preloaded_UniProtTable> should be either TRUE or FALSE")}
-  if(missing(export)){export<-FALSE}
-  if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
-  if(missing(file)){file=paste0("UniProtTable_GO_OrganismID_",organismID,"_",format(Sys.time(),"%b_%d_%Y"),".txt")}
 
-
-  #if the object UniProtTable already exists, use it only if preloaded_UniProtTable is TRUE
   if(preloaded_UniProtTable==TRUE&&exists("UniProtTable")){
     UPT<- UniProtTable
   }else{
+    #general checking
+    if(missing(organismID)&missing(proteomeID)){warning("The 'organismID' and 'proteomeID' were left empty, 'homo sapiens' (9006) will be used by default")
+      organismID<-"9606"}
+    if(missing(reviewed)){reviewed<-FALSE}
+    if(!is.logical(reviewed)){warning("<reviewed> should be either TRUE or FALSE, by default reviewed=FALSE was used")
+      reviewed<- FALSE}
+    if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
+    #download the table
     download_UniProtTable(organismID=organismID, reviewed=reviewed)
     UPT<-UniProtTable
   }
 
+
   #extract the required columns from the UniProtTable (UPT) and ensure the content is considered as character by R
-  UPT<-UPT[,c(1,2,8)]
+  UPT<-UPT[,colnames(UPT) %in% c("Uniprot_Accession","Uniprot_ID","Crossref_KEGG" )]
+
   for(i in 1:3){
     UPT[,i]<-as.character(t(UPT[,i]))
   }
@@ -335,6 +364,70 @@ generate_UniProtTable_KEGG<- function(organismID="9606",reviewed=TRUE,preloaded_
   }
 }
 
+#' generate_UniProtTable_REACTOME()
+#' @description Retrieve UniProt Reactome pathways for the proteins of a given organism
+#' @param organismID Should be a UniProt organism ID, by default Homo sapiens will be used ("9606")
+#' @param reviewed this indicate if the proteins extracted have to be reviewed or not (typically the ones present on swissProt), by default TRUE (the non reviewed proteins are discarded)
+#' @param preloaded_UniProtTable this indicate wether or not the preloaded UniProtTable and UniProtTable_GO should be used, if FALSE the UniProtTable and UniProtTable_GO will be generated again
+#'
+#' @return This function generate a reactome table
+#'
+#' @examples generate_UniProtTable_REACTOME(organismID="9606",reviewed=TRUE,preloaded_UniProtTable=TRUE,export=FALSE,file="UniProtTable_KEGG_organismID_date.rda")
+#'
+generate_UniProtTable_REACTOME<-function(organismID="9606",reviewed=TRUE,preloaded_UniProtTable=TRUE,export=FALSE,file="UniProtTable_KEGG_organismID_date.rda"){
+if(missing(preloaded_UniProtTable)){preloaded_UniProtTable<-TRUE}
+  if(!is.logical(preloaded_UniProtTable)){stop("<preloaded_UniProtTable> should be either TRUE or FALSE")}
+
+  if(preloaded_UniProtTable==TRUE&&exists("UniProtTable")){
+    UPT<- UniProtTable
+  }else{
+    #general checking
+    if(missing(organismID)&missing(proteomeID)){warning("The 'organismID' and 'proteomeID' were left empty, 'homo sapiens' (9006) will be used by default")
+      organismID<-"9606"}
+    if(missing(reviewed)){reviewed<-FALSE}
+    if(!is.logical(reviewed)){warning("<reviewed> should be either TRUE or FALSE, by default reviewed=FALSE was used")
+      reviewed<- FALSE}
+    if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
+    #download the table
+    download_UniProtTable(organismID=organismID, reviewed=reviewed)
+    UPT<-UniProtTable
+  }
+
+  #extract the required columns from the UniProtTable (UPT) and ensure the content is considered as character by R
+  UPT<-UPT[,colnames(UPT) %in% c("Uniprot_Accession","Uniprot_ID","Reactome_List")]
+
+  for(i in 1:3){
+    UPT[,i]<-as.character(t(UPT[,i]))
+  }
+
+  #create a list to store the different GO terms associated with each protein
+  uniList<-list()
+  #create objects to store the Uniprot_accession and the Uniprot_ID
+  Uniprot_Accession<-character()
+  Uniprot_ID<-character()
+
+  #fill the three objects created above
+  for (i in 1:nrow(UPT)){
+    uniList[[i]]<-trimws(unlist(strsplit(UPT[i,3],";")))
+    Uniprot_Accession<-c(Uniprot_Accession,rep(UPT[i,1],length(uniList[[i]])))
+    Uniprot_ID<-c(Uniprot_ID,rep(UPT[i,2],length(uniList[[i]])))
+  }
+
+  #create the Data frame containing these details
+  UniProtTable_REACTOME<-data.frame(Uniprot_Accession=Uniprot_Accession, Uniprot_ID=Uniprot_ID, REACTOME=unlist(uniList))
+
+  #download the REACTOME pathway names
+  #to be added
+
+  #Place the reordered table in the Global Environment
+  UniProtTable_REACTOME <<- UniProtTable_REACTOME
+
+  #export file if export==TRUE
+  if(export==TRUE){
+    save(UniProtTable_GO,file = file)
+    }
+  }
+
 #' UniProt_GO_Fisher()
 #' @description Allows to use UniprotDB Gene Ontology information to perform a FisherExact test for enrichment analysis
 #' @param query should be a character vector corresponding to a query list (UniProt_Accession or UniProt_ID)
@@ -347,9 +440,8 @@ generate_UniProtTable_KEGG<- function(organismID="9606",reviewed=TRUE,preloaded_
 #'
 #' @examples UniProt_GO_Fisher(QueryExample, UniverseExample, organism.id=organismExample)
 #'
-
 UniProt_GO_Fisher<-function(query, universe, organismID="9606", reviewed=TRUE, preloaded_UniProtTable=TRUE){
-  #general checkings
+  #general checking
   if(missing(organismID)){organismID<-"9606"}
   if(missing(reviewed)){reviewed<-TRUE}
   if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
@@ -374,20 +466,52 @@ UniProt_GO_Fisher<-function(query, universe, organismID="9606", reviewed=TRUE, p
   #check query
   if(missing(query)){stop("Your <query> is missing")}
 
+  #check universe
+  if(missing(universe)){
+    print("Your <universe> was missing the global list of ID present in UniProtTable was used as background.")
+    universe<-as.character(t(UniProtTable$Uniprot_ID))
+  }
+
+  #if query contained multiple IDs separated by semicolons only the first one was conserved
+  if(sum(grepl(";",query))>0){
+    print(paste0(sum(grepl(";",query))," proteins of your <query> list had more than one identifier, only the first one was conserved"))
+    query<-gsub("\\;.*","",query)
+  }
+
+  #if universe contained multiple IDs separated by semicolons only the first one was conserved
+  if(sum(grepl(";",universe))>0){
+    print(paste0(sum(grepl(";",universe))," proteins of your <universe> list had more than one identifier, only the first one was conserved"))
+    universe<-gsub("\\;.*","",universe)
+  }
+
   #check how many of the query are in the lists UniProtTable
   query_ID <- query[query %in% UniProtTable$Uniprot_ID]
   query_Accession <- query[query %in% UniProtTable$Uniprot_Accession]
-
   print(paste0("Your <query> contained ", length(query_ID), " UniProt_IDs and ", length(query_Accession), " UniProt_Accession (some might be redundant)." ))
 
   #if no values in the UniProtTable stop
   if (length(query_ID)==0&&length(query_Accession)==0){stop("Your <query> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your query is present in the UniProtTable.")}
+
+  #check how many of the query are in the lists UniProtTable
+  universe_ID <- universe[universe %in% UniProtTable$Uniprot_ID]
+  universe_Accession <- universe[universe %in% UniProtTable$Uniprot_Accession]
+  print(paste0("Your <universe> contained ", length(universe_ID), " UniProt_IDs and ", length(universe_Accession), " UniProt_Accession (some might be redundant)." ))
+
+  #if no values in the UniProtTable stop
+  if (length(query_ID)==0&&length(query_Accession)==0){stop("Your <query> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your query is present in the UniProtTable.")}
+  if (length(universe_ID)==0&&length(universe_Accession)==0){stop("Your <universe> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your universe is present in the UniProtTable.")}
 
   #convert uniprot_Accession in Uniprot
   if(length(query_Accession)>0){
     print("The uniprot_Accession of your query were converted in Uniprot_IDs.")
     query_Accession<- as.character(t(UniProtTable[match(query_Accession,UniProtTable$Uniprot_Accession),2]))
     query_ID<-c(query_ID,query_Accession)
+  }
+
+  if(length(universe_Accession)>0){
+    print("The uniprot_Accession of your universe were converted in Uniprot_IDs.")
+    universe_Accession<- as.character(t(UniProtTable[match(universe_Accession,UniProtTable$Uniprot_Accession),2]))
+    universe_ID<-c(universe_ID,universe_Accession)
   }
 
   #remove duplicates
@@ -397,29 +521,6 @@ UniProt_GO_Fisher<-function(query, universe, organismID="9606", reviewed=TRUE, p
     query_ID<-query_ID[!duplicated_ID]
     }
 
-  #check universe
-  if(missing(universe)){
-  print("Your <universe> was missing the global list of ID present in UniProtTable was used as background.")
-  universe<-as.character(t(UniProtTable$Uniprot_ID))
-  }
-
-  #check how many of the universe are in the lists UniProtTable
-  universe_ID <- universe[universe %in% UniProtTable$Uniprot_ID]
-  universe_Accession <- universe[universe %in% UniProtTable$Uniprot_Accession]
-
-  print(paste0("Your universe contained ", length(universe_ID), " UniProt_IDs and ", length(universe_Accession), " UniProt_Accession (some might be redundant)." ))
-
-  #if no values in the UniProtTable stop
-  if (length(universe_ID)==0&&length(universe_Accession)==0){stop("Your <universe> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your universe is present in the UniProtTable.")}
-
-  #convert uniprot_Accession in Uniprot
-  if(length(universe_Accession)>0){
-    print("The uniprot_Accession of your universe were converted in Uniprot_IDs.")
-    universe_Accession<- as.character(t(UniProtTable[match(universe_Accession,UniProtTable$Uniprot_Accession),2]))
-    universe_ID<-c(universe_ID,universe_Accession)
-  }
-
-  #remove duplicates
   duplicated_ID<-duplicated(universe_ID)
   if(sum(duplicated_ID)>0){
     print(paste0("Your list of Uniprot_IDs was containing ", sum(duplicated_ID)," duplicated value(s), duplicates were removed, the universe now comprises ", length(universe_ID)-sum(duplicated_ID), " unique IDs."))
@@ -427,14 +528,14 @@ UniProt_GO_Fisher<-function(query, universe, organismID="9606", reviewed=TRUE, p
   }
 
   #check if the universe contains all the proteins from the query
-  if(sum(is.na(match(query_ID,universe_ID)))>0){stop("Your <universe> does not comprises all the IDs present in your <query>")}
+  if(sum(is.na(match(query_ID,universe_ID)))>0){warning("Your <universe> does not comprises all the IDs present in your <query>")}
 
   #generate the UniProtTable_GO for the query and the universe
   UPT_GO_query <- UPT_GO[UPT_GO$Uniprot_ID %in% query_ID,]
   UPT_GO_universe <-UPT_GO[UPT_GO$Uniprot_ID %in% universe_ID,]
 
   #create the unique_GO list based on the UPT_GO_query
-  unique_GO<- unique(UPT_GO_query[,3:4])
+  unique_GO<- unique(UPT_GO_query[,3:5])
 
   #create the Contingencies matrix
   contingency_list<-list()
@@ -448,25 +549,38 @@ UniProt_GO_Fisher<-function(query, universe, organismID="9606", reviewed=TRUE, p
   names(contingency_list)<-unique_GO[,1]
 
   #create Final table
-  fisher_results<-data.frame(matrix(NA, nrow=nrow(unique_GO), ncol=11))
-  colnames(fisher_results)<- c("Ontology_type","Ontology_accession","Ongology_description","Count_query","Count_universe","%_query","%_universe","pval","adjpval","fold_change","Proteins_in_query")
-  fisher_results[,2:3]<-unique_GO[,1:2]
+  fisher_results<-data.frame(matrix(NA, nrow=nrow(unique_GO), ncol=13))
+  colnames(fisher_results)<- c("Category","Term_accession","Term_description","Count_query","Pop_query","Count_universe","Pop_universe","%_query","%_universe","pval","adjpval","fold_change","Proteins_in_query")
+  fisher_results$Category<-unique_GO$GO_type
+  fisher_results$Term_accession<-unique_GO$GO_accession
+  fisher_results$Term_description<-unique_GO$GO_description
+  fisher_results$Pop_query<-rep(length(query_ID),nrow(fisher_results))
+  fisher_results$Pop_universe<-rep(length(universe_ID),nrow(fisher_results))
 
   #run the test and populate the table
   for (i in 1:nrow(unique_GO)){
     test<-fisher.test(contingency_list[[i]])
-    fisher_results$`Ontology_type`[i]<-"GO"
     fisher_results$pval[i]<-test$p.value
-    fisher_results$adjpval[i]<-p.adjust(fisher_results$pval[i] , method = "BH", nrow(unique_GO))
-    fisher_results$Count_query[i]<- paste0(contingency_list[[i]][1,1],"/",length(query_ID))
-    fisher_results$Count_universe[i]<- paste0(contingency_list[[i]][1,2],"/",length(universe_ID))
+    fisher_results$Count_query[i]<-contingency_list[[i]][1,1]
+    fisher_results$Count_universe[i]<-contingency_list[[i]][1,2]
     fisher_results$`%_query` [i]<- contingency_list[[i]][1,1]/length(query_ID)*100
     fisher_results$`%_universe`[i]<- contingency_list[[i]][1,2]/length(universe_ID)*100
     fisher_results$fold_change[i]<- fisher_results$`%_query`[i]/fisher_results$`%_universe`[i]
-    fisher_results$Proteins_in_query[i]<-paste(UPT_GO_query[UPT_GO_query$GO_accession==fisher_results$Ontology_accession[i],]$Uniprot_ID,collapse =";")
+    fisher_results$Proteins_in_query[i]<-paste(UPT_GO_query[UPT_GO_query$GO_accession==fisher_results$Term_accession[i],]$Uniprot_ID,collapse =";")
   }
 
-  fisher_results[order(fisher_results$pval),]
+  fisher_results_BP<-fisher_results[fisher_results$Category=="GO_BP",]
+  fisher_results_BP$adjpval<-p.adjust(p=fisher_results_BP$pval,method = "BH",length(fisher_results_BP$pval))
+
+  fisher_results_CC<-fisher_results[fisher_results$Category=="GO_CC",]
+  fisher_results_CC$adjpval<-p.adjust(p=fisher_results_CC$pval,method = "BH",length(fisher_results_CC$pval))
+
+  fisher_results_MF<-fisher_results[fisher_results$Category=="GO_MF",]
+  fisher_results_MF$adjpval<-p.adjust(p=fisher_results_MF$pval,method = "BH",length(fisher_results_MF$pval))
+
+  fisher_results<-rbind(fisher_results_BP,fisher_results_CC,fisher_results_MF)
+  fisher_results<-fisher_results[order(fisher_results$pval),]
+  return(fisher_results)
 }
 
 #' UniProt_GO_EASE()
@@ -481,9 +595,8 @@ UniProt_GO_Fisher<-function(query, universe, organismID="9606", reviewed=TRUE, p
 #'
 #' @examples UniProt_GO_EASE(QueryExample, UniverseExample, organism.id=organismExample)
 #'
-
 UniProt_GO_EASE<-function(query, universe, organismID="9606", reviewed=TRUE, preloaded_UniProtTable=TRUE){
-  #general checkings
+  #general checking
   if(missing(organismID)){organismID<-"9606"}
   if(missing(reviewed)){reviewed<-TRUE}
   if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
@@ -495,29 +608,65 @@ UniProt_GO_EASE<-function(query, universe, organismID="9606", reviewed=TRUE, pre
     UPT<- UniProtTable
   }else {
     download_UniProtTable(organismID=organismID,reviewed=reviewed)
-    }
+    UPT<- UniProtTable
+  }
 
   if(preloaded_UniProtTable==TRUE&&exists("UniProtTable_GO")){
     UPT_GO<- UniProtTable_GO
-  }else {generate_UniProtTable_GO(organismID=organismID,reviewed=reviewed,preloaded_UniProtTable==TRUE)}
+  }else {
+    generate_UniProtTable_GO(organismID=organismID,reviewed=reviewed,preloaded_UniProtTable==TRUE)
+    UPT_GO<- UniProtTable_GO
+  }
 
   #check query
   if(missing(query)){stop("Your <query> is missing")}
 
+  #check universe
+  if(missing(universe)){
+    print("Your <universe> was missing the global list of ID present in UniProtTable was used as background.")
+    universe<-as.character(t(UniProtTable$Uniprot_ID))
+  }
+
+  #if query contained multiple IDs separated by semicolons only the first one was conserved
+  if(sum(grepl(";",query))>0){
+    print(paste0(sum(grepl(";",query))," proteins of your <query> list had more than one identifier, only the first one was conserved"))
+    query<-gsub("\\;.*","",query)
+  }
+
+  #if universe contained multiple IDs separated by semicolons only the first one was conserved
+  if(sum(grepl(";",universe))>0){
+    print(paste0(sum(grepl(";",universe))," proteins of your <universe> list had more than one identifier, only the first one was conserved"))
+    universe<-gsub("\\;.*","",universe)
+  }
+
   #check how many of the query are in the lists UniProtTable
   query_ID <- query[query %in% UniProtTable$Uniprot_ID]
   query_Accession <- query[query %in% UniProtTable$Uniprot_Accession]
-
   print(paste0("Your <query> contained ", length(query_ID), " UniProt_IDs and ", length(query_Accession), " UniProt_Accession (some might be redundant)." ))
 
   #if no values in the UniProtTable stop
   if (length(query_ID)==0&&length(query_Accession)==0){stop("Your <query> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your query is present in the UniProtTable.")}
+
+  #check how many of the query are in the lists UniProtTable
+  universe_ID <- universe[universe %in% UniProtTable$Uniprot_ID]
+  universe_Accession <- universe[universe %in% UniProtTable$Uniprot_Accession]
+  print(paste0("Your <universe> contained ", length(universe_ID), " UniProt_IDs and ", length(universe_Accession), " UniProt_Accession (some might be redundant)." ))
+
+  #if no values in the UniProtTable stop
+  if (length(query_ID)==0&&length(query_Accession)==0){stop("Your <query> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your query is present in the UniProtTable.")}
+  if (length(universe_ID)==0&&length(universe_Accession)==0){stop("Your <universe> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your universe is present in the UniProtTable.")}
 
   #convert uniprot_Accession in Uniprot
   if(length(query_Accession)>0){
     print("The uniprot_Accession of your query were converted in Uniprot_IDs.")
     query_Accession<- as.character(t(UniProtTable[match(query_Accession,UniProtTable$Uniprot_Accession),2]))
     query_ID<-c(query_ID,query_Accession)
+  }
+
+  if(length(universe_Accession)>0){
+    print("The uniprot_Accession of your universe were converted in Uniprot_IDs.")
+    universe_Accession<- as.character(t(UniProtTable[match(universe_Accession,UniProtTable$Uniprot_Accession),2]))
+    universe_ID<-c(universe_ID,universe_Accession)
   }
 
   #remove duplicates
@@ -527,29 +676,6 @@ UniProt_GO_EASE<-function(query, universe, organismID="9606", reviewed=TRUE, pre
     query_ID<-query_ID[!duplicated_ID]
   }
 
-  #check universe
-  if(missing(universe)){
-    print("Your <universe> was missing the global list of ID present in UniProtTable was used as background.")
-    universe<-as.character(t(UniProtTable$Uniprot_ID))
-  }
-
-  #check how many of the universe are in the lists UniProtTable
-  universe_ID <- universe[universe %in% UniProtTable$Uniprot_ID]
-  universe_Accession <- universe[universe %in% UniProtTable$Uniprot_Accession]
-
-  print(paste0("Your universe contained ", length(universe_ID), " UniProt_IDs and ", length(universe_Accession), " UniProt_Accession (some might be redundant)." ))
-
-  #if no values in the UniProtTable stop
-  if (length(universe_ID)==0&&length(universe_Accession)==0){stop("Your <universe> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your universe is present in the UniProtTable.")}
-
-  #convert uniprot_Accession in Uniprot
-  if(length(universe_Accession)>0){
-    print("The uniprot_Accession of your universe were converted in Uniprot_IDs.")
-    universe_Accession<- as.character(t(UniProtTable[match(universe_Accession,UniProtTable$Uniprot_Accession),2]))
-    universe_ID<-c(universe_ID,universe_Accession)
-  }
-
-  #remove duplicates
   duplicated_ID<-duplicated(universe_ID)
   if(sum(duplicated_ID)>0){
     print(paste0("Your list of Uniprot_IDs was containing ", sum(duplicated_ID)," duplicated value(s), duplicates were removed, the universe now comprises ", length(universe_ID)-sum(duplicated_ID), " unique IDs."))
@@ -557,14 +683,14 @@ UniProt_GO_EASE<-function(query, universe, organismID="9606", reviewed=TRUE, pre
   }
 
   #check if the universe contains all the proteins from the query
-  if(sum(is.na(match(query_ID,universe_ID)))>0){stop("Your <universe> does not comprises all the IDs present in your <query>")}
+  if(sum(is.na(match(query_ID,universe_ID)))>0){warning("Your <universe> does not comprises all the IDs present in your <query>")}
 
   #generate the UniProtTable_GO for the query and the universe
   UPT_GO_query <- UPT_GO[UPT_GO$Uniprot_ID %in% query_ID,]
   UPT_GO_universe <-UPT_GO[UPT_GO$Uniprot_ID %in% universe_ID,]
 
   #create the unique_GO list based on the UPT_GO_query
-  unique_GO<- unique(UPT_GO_query[,3:4])
+  unique_GO<- unique(UPT_GO_query[,3:5])
 
   #create the Contingencies matrix
   contingency_list<-list()
@@ -578,27 +704,38 @@ UniProt_GO_EASE<-function(query, universe, organismID="9606", reviewed=TRUE, pre
   names(contingency_list)<-unique_GO[,1]
 
   #create Final table
-  EASE_results<-data.frame(matrix(NA, nrow=nrow(unique_GO), ncol=10))
-  colnames(EASE_results)<- c("Ontology_type","Ontology_accession","Ongology_description","Count_universe","%_query","%_universe","pval","adjpval","fold_change","Proteins_in_query")
-  EASE_results[,2:3]<-unique_GO[,1:2]
+  EASE_results<-data.frame(matrix(NA, nrow=nrow(unique_GO), ncol=13))
+  colnames(EASE_results)<- c("Category","Term_accession","Term_description","Count_query","Pop_query","Count_universe","Pop_universe","%_query","%_universe","pval","adjpval","fold_change","Proteins_in_query")
+  EASE_results$Category<-unique_GO$GO_type
+  EASE_results$Term_accession<-unique_GO$GO_accession
+  EASE_results$Term_description<-unique_GO$GO_description
+  EASE_results$Pop_query<-rep(length(query_ID),nrow(EASE_results))
+  EASE_results$Pop_universe<-rep(length(universe_ID),nrow(EASE_results))
 
   #run the test and populate the table
   for (i in 1:nrow(unique_GO)){
     test<-fisher.test(contingency_list[[i]])
-    EASE_results$`Ontology_type`[i]<-"GO"
     EASE_results$pval[i]<-test$p.value
-    EASE_results$adjpval[i]<-p.adjust(EASE_results$pval[i] , method = "BH", nrow(unique_GO))
-    EASE_results$Count_query[i]<- paste0((contingency_list[[i]][1,1]+1),"/",length(query_ID))
-    EASE_results$Count_universe[i]<- paste0(contingency_list[[i]][1,2],"/",length(universe_ID))
+    EASE_results$Count_query[i]<-contingency_list[[i]][1,1]+1
+    EASE_results$Count_universe[i]<-contingency_list[[i]][1,2]
     EASE_results$`%_query` [i]<- contingency_list[[i]][1,1]/length(query_ID)*100
     EASE_results$`%_universe`[i]<- contingency_list[[i]][1,2]/length(universe_ID)*100
     EASE_results$fold_change[i]<- EASE_results$`%_query`[i]/EASE_results$`%_universe`[i]
-    EASE_results$Proteins_in_query[i]<-paste(UPT_GO_query[UPT_GO_query$GO_accession==EASE_results$Ontology_accession[i],]$Uniprot_ID,collapse =";")
+    EASE_results$Proteins_in_query[i]<-paste(UPT_GO_query[UPT_GO_query$GO_accession==EASE_results$Term_accession[i],]$Uniprot_ID,collapse =";")
   }
 
-  EASE_results[order(EASE_results$pval),]
+  EASE_results_BP<-EASE_results[EASE_results$Category=="GO_BP",]
+  EASE_results_BP$adjpval<-p.adjust(p=EASE_results_BP$pval,method = "BH",length(EASE_results_BP$pval))
 
+  EASE_results_CC<-EASE_results[EASE_results$Category=="GO_CC",]
+  EASE_results_CC$adjpval<-p.adjust(p=EASE_results_CC$pval,method = "BH",length(EASE_results_CC$pval))
 
+  EASE_results_MF<-EASE_results[EASE_results$Category=="GO_MF",]
+  EASE_results_MF$adjpval<-p.adjust(p=EASE_results_MF$pval,method = "BH",length(EASE_results_MF$pval))
+
+  EASE_results<-rbind(EASE_results_BP,EASE_results_CC,EASE_results_MF)
+  EASE_results<-EASE_results[order(EASE_results$pval),]
+  return(EASE_results)
 }
 
 #' UniProt_GO_KS()
@@ -613,9 +750,8 @@ UniProt_GO_EASE<-function(query, universe, organismID="9606", reviewed=TRUE, pre
 #'
 #' @examples UniProt_GO_EASE(QueryExample, UniverseExample, organism.id=organismExample)
 #'
-
 UniProt_GO_KS<-function(rankingTable, order= "ascending", organismID="9606", reviewed=TRUE, preloaded_UniProtTable=TRUE){
-  #general checkings
+  #general checking
   rankingTable<-data.frame(rankingTable)
   if(ncol(rankingTable)!=2){stop("df should contain two columns")}
   rankingTable[rankingTable==""]<-NA
@@ -638,50 +774,49 @@ UniProt_GO_KS<-function(rankingTable, order= "ascending", organismID="9606", rev
 
   if(preloaded_UniProtTable==TRUE&&exists("UniProtTable_GO")){
     UPT_GO<- UniProtTable_GO
-  }else{
+  }else {
     generate_UniProtTable_GO(organismID=organismID,reviewed=reviewed,preloaded_UniProtTable==TRUE)
     UPT_GO<- UniProtTable_GO
-    }
+  }
 
-  #order based on the ascending/descending order parameter
-  if(order=="ascending"){
-    rankingTable<-rankingTable[order(rankingTable[,2]),]
-  }else{
-      rankingTable<-rankingTable[order(rankingTable[,2],decreasing=TRUE),]
-      }
+  #if rankingTable_IDs contained multiple IDs separated by semicolons only the first one was conserved
+  if(sum(grepl(";",rankingTable[,1]))>0){
+    print(paste0(sum(grepl(";",rankingTable[,1]))," proteins of your <rankingTable_IDs> list had more than one identifier, only the first one was conserved"))
+    rankingTable[,1]<-gsub("\\;.*","",rankingTable[,1])
+  }
 
-  #add a KS column in this table
-  rankingTable$KSRank<-1:nrow(rankingTable)
-
-  #check how many of the rankingTable are in the lists UniProtTable
+  #check how many of the rankingTable_IDs are in the lists UniProtTable
   rankingTable_ID <- rankingTable[rankingTable[,1] %in% UniProtTable$Uniprot_ID,1]
   rankingTable_Accession <- rankingTable[rankingTable[,1] %in% UniProtTable$Uniprot_Accession,1]
 
-  print(paste0("Your <rankingTable> contained ", length(rankingTable_ID), " UniProt_IDs and ", length(rankingTable_Accession), " UniProt_Accession (some might be redundant)." ))
+   #if no values in the UniProtTable stop
+  if (length(rankingTable_ID)==0&&length(rankingTable_Accession)==0){stop("Your <rankingTable> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your rankingTable is present in the UniProtTable.")}
 
-  #if no values in the UniProtTable stop
-  if (length(rankingTable_ID)==0&&length(rankingTable_Accession)==0){stop("Your <query> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your query is present in the UniProtTable.")}
-
-  #convert uniprot_Accession in Uniprot_ID
+  #convert uniprot_Accession in Uniprot
   if(length(rankingTable_Accession)>0){
     print("The uniprot_Accession of your rankingTable were converted in Uniprot_IDs.")
-    rankingTable_Accession<- as.character(t(UniProtTable[match(rankingTable_Accession,UniProtTable$Uniprot_Accession),2]))
-    rankingTable_ID<-c(rankingTable_ID,rankingTable_Accession)
+    rankingTable[rankingTable[,1] %in% UniProtTable$Uniprot_Accession,1]<-as.character(t(UniProtTable[match(rankingTable[rankingTable[,1] %in% UniProtTable$Uniprot_Accession,1],UniProtTable$Uniprot_Accession),2]))
   }
 
   #remove duplicates
   duplicated_ID<-duplicated(rankingTable[,1])
   if(sum(duplicated_ID)>0){
-    print(paste0("Your list of Uniprot_IDs was containing ", sum(duplicated_ID)," duplicated value(s), duplicates were removed, the rankingTable now comprises ", length(rankingTable_ID)-sum(duplicated_ID), " unique IDs."))
+    print(paste0("Your list of Uniprot_IDs was containing ", sum(duplicated_ID)," duplicated value(s), duplicates were removed, the query now comprises ", length(query_ID)-sum(duplicated_ID), " unique IDs."))
     rankingTable<-rankingTable[!duplicated_ID,]
-    rankingTable$KSRank<-1:nrow(rankingTable)
-    }
+  }
+
+    #order based on the ascending/descending order parameter
+  if(order=="ascending"){
+    rankingTable<-rankingTable[order(as.numeric(rankingTable[,2])),]
+  }else{
+      rankingTable<-rankingTable[order(as.numeric(rankingTable[,2]),decreasing=TRUE),]
+      }
 
   #generate the UniProtTable_GO for the rankingTable
-  UPT_GO_rankingTable <- UPT_GO[UPT_GO$Uniprot_ID %in% rankingTable_ID,]
+  UPT_GO_rankingTable <- UPT_GO[UPT_GO$Uniprot_ID %in% rankingTable[,1],]
 
   #create the unique_GO list based on the UPT_GO_query
-  unique_GO<- unique(UPT_GO_rankingTable[,3:4])
+  unique_GO<- unique(UPT_GO_rankingTable[,3:5])
 
   #create a list of sub RankingTables
   RT_by_GO<-list()
@@ -695,7 +830,7 @@ UniProt_GO_KS<-function(rankingTable, order= "ascending", organismID="9606", rev
     RT_by_GO[[i]]<-Rank
     }
 
-  names(RT_by_GO)<-paste0(unique_GO$GO_accession,"@",unique_GO$GO_description)
+  names(RT_by_GO)<-paste0(unique_GO$GO_accession,"@",unique_GO$GO_description,"@",unique_GO$GO_type)
 
   #realise the KS.test
   p<-numeric()
@@ -704,22 +839,28 @@ UniProt_GO_KS<-function(rankingTable, order= "ascending", organismID="9606", rev
       p[i]<-ks.test(RT_by_GO[[i]]$KSRank,seq_len(nrow(rankingTable))[-RT_by_GO[[i]]$KSRank],alternative="greater")$p.value}else{p[i]<-1}
   }
 
-  #calculate the adjusted pvalues
-  adjp<-p.adjust(p)
-
   #create the final table
   final_table<-data.frame(matrix(ncol=4,nrow= nrow(unique_GO)))
-  colnames(final_table) <- c("Count.in.list", "p.value", "adj.p","IDs.in.list")
+  colnames(final_table) <- c("Count.in.list", "pval", "adjpval","IDs.in.list")
   final_table<-cbind(unique_GO,final_table)
   for(i in 1:nrow(unique_GO)){
     final_table$Count.in.list[i]<-nrow(RT_by_GO[[i]])
     final_table$IDs.in.list[i]<-IDs_by_GO[[i]]
     }
-  final_table$`p.value`<-p
-  final_table$adj.p<-adjp
+  final_table$pval<-p
+
+  final_table_BP<-final_table[final_table$GO_type=="GO_BP",]
+  final_table_BP$adjpval<-p.adjust(p=final_table_BP$pval,method = "BH",length(final_table_BP$pval))
+
+  final_table_CC<-final_table[final_table$GO_type=="GO_CC",]
+  final_table_CC$adjpval<-p.adjust(p=final_table_CC$pval,method = "BH",length(final_table_CC$pval))
+
+  final_table_MF<-final_table[final_table$GO_type=="GO_MF",]
+  final_table_MF$adjpval<-p.adjust(p=final_table_MF$pval,method = "BH",length(final_table_MF$pval))
+
+  final_table<-rbind(final_table_BP,final_table_CC,final_table_MF)
 
   return(final_table)
-
 }
 
 #' UniProt_KEGG_Fisher()
@@ -735,7 +876,154 @@ UniProt_GO_KS<-function(rankingTable, order= "ascending", organismID="9606", rev
 #' @examples UniProtGOfisher(QueryExample, UniverseExample, organism.id=organismExample)
 #'
 UniProt_KEGG_Fisher<-function(query, universe, organismID="9606", reviewed=TRUE, preloaded_UniProtTable=TRUE){
-  #general checkings
+    #general checking
+    if(missing(organismID)){organismID<-"9606"}
+    if(missing(reviewed)){reviewed<-TRUE}
+    if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
+    if(missing(preloaded_UniProtTable)){preloaded_UniProtTable<-TRUE}
+    if(!is.logical(preloaded_UniProtTable)){stop("<preloaded_UniProtTable> should be either TRUE or FALSE")}
+
+    #load the UniProtTable and UniProtTable_GO (not if it is preloaded)
+    if(preloaded_UniProtTable==TRUE&&exists("UniProtTable")){
+      UPT<- UniProtTable
+    }else {
+      download_UniProtTable(organismID=organismID,reviewed=reviewed)
+      UPT<- UniProtTable
+    }
+
+    if(preloaded_UniProtTable==TRUE&&exists("UniProtTable_GO")){
+      UPT_KEGG<- UniProtTable_KEGG
+    }else {
+      generate_UniProtTable_GO(organismID=organismID,reviewed=reviewed,preloaded_UniProtTable==TRUE)
+      UPT_KEGG<- UniProtTable_KEGG
+    }
+
+    #check query
+    if(missing(query)){stop("Your <query> is missing")}
+
+    #check universe
+    if(missing(universe)){
+      print("Your <universe> was missing the global list of ID present in UniProtTable was used as background.")
+      universe<-as.character(t(UniProtTable$Uniprot_ID))
+    }
+
+    #if query contained multiple IDs separated by semicolons only the first one was conserved
+    if(sum(grepl(";",query))>0){
+      print(paste0(sum(grepl(";",query))," proteins of your <query> list had more than one identifier, only the first one was conserved"))
+      query<-gsub("\\;.*","",query)
+    }
+
+    #if universe contained multiple IDs separated by semicolons only the first one was conserved
+    if(sum(grepl(";",universe))>0){
+      print(paste0(sum(grepl(";",universe))," proteins of your <universe> list had more than one identifier, only the first one was conserved"))
+      universe<-gsub("\\;.*","",universe)
+    }
+
+    #check how many of the query are in the lists UniProtTable
+    query_ID <- query[query %in% UniProtTable$Uniprot_ID]
+    query_Accession <- query[query %in% UniProtTable$Uniprot_Accession]
+    print(paste0("Your <query> contained ", length(query_ID), " UniProt_IDs and ", length(query_Accession), " UniProt_Accession (some might be redundant)." ))
+
+    #if no values in the UniProtTable stop
+    if (length(query_ID)==0&&length(query_Accession)==0){stop("Your <query> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your query is present in the UniProtTable.")}
+
+    #check how many of the query are in the lists UniProtTable
+    universe_ID <- universe[universe %in% UniProtTable$Uniprot_ID]
+    universe_Accession <- universe[universe %in% UniProtTable$Uniprot_Accession]
+    print(paste0("Your <universe> contained ", length(universe_ID), " UniProt_IDs and ", length(universe_Accession), " UniProt_Accession (some might be redundant)." ))
+
+    #if no values in the UniProtTable stop
+    if (length(query_ID)==0&&length(query_Accession)==0){stop("Your <query> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your query is present in the UniProtTable.")}
+    if (length(universe_ID)==0&&length(universe_Accession)==0){stop("Your <universe> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your universe is present in the UniProtTable.")}
+
+    #convert uniprot_Accession in Uniprot
+    if(length(query_Accession)>0){
+      print("The uniprot_Accession of your query were converted in Uniprot_IDs.")
+      query_Accession<- as.character(t(UniProtTable[match(query_Accession,UniProtTable$Uniprot_Accession),2]))
+      query_ID<-c(query_ID,query_Accession)
+    }
+
+    if(length(universe_Accession)>0){
+      print("The uniprot_Accession of your universe were converted in Uniprot_IDs.")
+      universe_Accession<- as.character(t(UniProtTable[match(universe_Accession,UniProtTable$Uniprot_Accession),2]))
+      universe_ID<-c(universe_ID,universe_Accession)
+    }
+
+    #remove duplicates
+    duplicated_ID<-duplicated(query_ID)
+    if(sum(duplicated_ID)>0){
+      print(paste0("Your list of Uniprot_IDs was containing ", sum(duplicated_ID)," duplicated value(s), duplicates were removed, the query now comprises ", length(query_ID)-sum(duplicated_ID), " unique IDs."))
+      query_ID<-query_ID[!duplicated_ID]
+    }
+
+    duplicated_ID<-duplicated(universe_ID)
+    if(sum(duplicated_ID)>0){
+      print(paste0("Your list of Uniprot_IDs was containing ", sum(duplicated_ID)," duplicated value(s), duplicates were removed, the universe now comprises ", length(universe_ID)-sum(duplicated_ID), " unique IDs."))
+      universe_ID<-universe_ID[!duplicated_ID]
+    }
+
+    #check if the universe contains all the proteins from the query
+    if(sum(is.na(match(query_ID,universe_ID)))>0){warning("Your <universe> does not comprises all the IDs present in your <query>")}
+
+    #generate the UniProtTable_GO for the query and the universe
+    UPT_KEGG_query <- UPT_KEGG[UPT_KEGG$Uniprot_ID %in% query_ID,]
+    UPT_KEGG_universe <-UPT_KEGG[UPT_KEGG$Uniprot_ID %in% universe_ID,]
+
+    #create the unique_KEGGO list based on the UPT_KEGG_query
+    unique_KEGG<- unique(UPT_KEGG_query[,4:5])
+    unique_KEGG<- unique_KEGG[!is.na(unique_KEGG$Pathway_ID),]
+
+    #create the Contingencies matrix
+    contingency_list<-list()
+    for (i in 1:nrow(unique_KEGG)){
+      contingency_list[[i]]<-matrix(ncol=2,nrow=2)
+      contingency_list[[i]][1,1]<- sum(UPT_KEGG_query[,4]==unique_KEGG[i,1])
+      contingency_list[[i]][1,2]<- sum(UPT_KEGG_universe[,4]==unique_KEGG[i,1])
+      contingency_list[[i]][2,1]<- length(query_ID)-contingency_list[[i]][1,1]
+      contingency_list[[i]][2,2]<- length(universe)-contingency_list[[i]][1,2]
+    }
+    names(contingency_list)<-unique_KEGG[,1]
+
+    #create Final table
+    fisher_results<-data.frame(matrix(NA, nrow=nrow(unique_KEGG), ncol=13))
+    colnames(fisher_results)<- c("Category","Term_accession","Term_description","Count_query","Pop_query","Count_universe","Pop_universe","%_query","%_universe","pval","adjpval","fold_change","Proteins_in_query")
+    fisher_results$Category<-"KEGG_pathway"
+    fisher_results$Term_accession<-unique_KEGG$Pathway_ID
+    fisher_results$Term_description<-unique_KEGG$Pathway_name
+    fisher_results$Pop_query<-rep(length(query_ID),nrow(fisher_results))
+    fisher_results$Pop_universe<-rep(length(universe_ID),nrow(fisher_results))
+
+    #run the test and populate the table
+    for (i in 1:nrow(unique_KEGG)){
+      test<-fisher.test(contingency_list[[i]])
+      fisher_results$pval[i]<-test$p.value
+      fisher_results$Count_query[i]<-contingency_list[[i]][1,1]
+      fisher_results$Count_universe[i]<-contingency_list[[i]][1,2]
+      fisher_results$`%_query` [i]<- contingency_list[[i]][1,1]/length(query_ID)*100
+      fisher_results$`%_universe`[i]<- contingency_list[[i]][1,2]/length(universe_ID)*100
+      fisher_results$fold_change[i]<- fisher_results$`%_query`[i]/fisher_results$`%_universe`[i]
+      fisher_results$Proteins_in_query[i]<-paste(UPT_KEGG_query[UPT_KEGG_query$KEGG_ID==fisher_results$Term_accession[i],]$Uniprot_ID,collapse =";")
+    }
+
+    fisher_results<-fisher_results[order(fisher_results$pval),]
+    fisher_results$adjpval<-p.adjust(fisher_results$pval)
+    return(fisher_results)
+  }
+
+#' UniProt_KEGG_EASE()
+#' @description Allows to use UniprotDB and KEGG db information to perform a modified FisherExact test corresponding to the one performed by the DAVID Bioinformatics tool for enrichment analysis.
+#' @param query should be a character vector corresponding to a query list (UniProt_Accession or UniProt_ID)
+#' @param universe should be a character vector corresponding to a universe list (Uniprot Entry), if missing the all table from the UniProtTable will be used as universe
+#' @param organismID Should be a UniProt organism ID, by default Homo sapiens will be used ("9606")
+#' @param reviewed this indicate if the proteins extracted have to be reviewed or not (typically the ones present on swissProt), by default TRUE (the non reviewed proteins are discarded)
+#' @param preloaded_UniProtTable this indicate wether or not the preloaded UniProtTable and UniProtTable_GO should be used, if FALSE the UniProtTable and UniProtTable_GO will be generated again
+#'
+#' @return a data.frame containing enrichment results
+#'
+#' @examples UniProtGOfisher(QueryExample, UniverseExample, organism.id=organismExample)
+#'
+UniProt_KEGG_EASE<-function(query, universe, organismID="9606", reviewed=TRUE, preloaded_UniProtTable=TRUE){
+  #general checking
   if(missing(organismID)){organismID<-"9606"}
   if(missing(reviewed)){reviewed<-TRUE}
   if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
@@ -748,32 +1036,64 @@ UniProt_KEGG_Fisher<-function(query, universe, organismID="9606", reviewed=TRUE,
   }else {
     download_UniProtTable(organismID=organismID,reviewed=reviewed)
     UPT<- UniProtTable
-    }
+  }
 
-  if(preloaded_UniProtTable==TRUE&&exists("UniProtTable_KEGG")){
+  if(preloaded_UniProtTable==TRUE&&exists("UniProtTable_GO")){
     UPT_KEGG<- UniProtTable_KEGG
   }else {
-    generate_UniProtTable_KEGG(organismID=organismID,reviewed=reviewed,preloaded_UniProtTable==TRUE)
+    generate_UniProtTable_GO(organismID=organismID,reviewed=reviewed,preloaded_UniProtTable==TRUE)
     UPT_KEGG<- UniProtTable_KEGG
-    }
+  }
 
   #check query
   if(missing(query)){stop("Your <query> is missing")}
 
+  #check universe
+  if(missing(universe)){
+    print("Your <universe> was missing the global list of ID present in UniProtTable was used as background.")
+    universe<-as.character(t(UniProtTable$Uniprot_ID))
+  }
+
+  #if query contained multiple IDs separated by semicolons only the first one was conserved
+  if(sum(grepl(";",query))>0){
+    print(paste0(sum(grepl(";",query))," proteins of your <query> list had more than one identifier, only the first one was conserved"))
+    query<-gsub("\\;.*","",query)
+  }
+
+  #if universe contained multiple IDs separated by semicolons only the first one was conserved
+  if(sum(grepl(";",universe))>0){
+    print(paste0(sum(grepl(";",universe))," proteins of your <universe> list had more than one identifier, only the first one was conserved"))
+    universe<-gsub("\\;.*","",universe)
+  }
+
   #check how many of the query are in the lists UniProtTable
   query_ID <- query[query %in% UniProtTable$Uniprot_ID]
   query_Accession <- query[query %in% UniProtTable$Uniprot_Accession]
-
   print(paste0("Your <query> contained ", length(query_ID), " UniProt_IDs and ", length(query_Accession), " UniProt_Accession (some might be redundant)." ))
 
   #if no values in the UniProtTable stop
   if (length(query_ID)==0&&length(query_Accession)==0){stop("Your <query> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your query is present in the UniProtTable.")}
+
+  #check how many of the query are in the lists UniProtTable
+  universe_ID <- universe[universe %in% UniProtTable$Uniprot_ID]
+  universe_Accession <- universe[universe %in% UniProtTable$Uniprot_Accession]
+  print(paste0("Your <universe> contained ", length(universe_ID), " UniProt_IDs and ", length(universe_Accession), " UniProt_Accession (some might be redundant)." ))
+
+  #if no values in the UniProtTable stop
+  if (length(query_ID)==0&&length(query_Accession)==0){stop("Your <query> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your query is present in the UniProtTable.")}
+  if (length(universe_ID)==0&&length(universe_Accession)==0){stop("Your <universe> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your universe is present in the UniProtTable.")}
 
   #convert uniprot_Accession in Uniprot
   if(length(query_Accession)>0){
     print("The uniprot_Accession of your query were converted in Uniprot_IDs.")
     query_Accession<- as.character(t(UniProtTable[match(query_Accession,UniProtTable$Uniprot_Accession),2]))
     query_ID<-c(query_ID,query_Accession)
+  }
+
+  if(length(universe_Accession)>0){
+    print("The uniprot_Accession of your universe were converted in Uniprot_IDs.")
+    universe_Accession<- as.character(t(UniProtTable[match(universe_Accession,UniProtTable$Uniprot_Accession),2]))
+    universe_ID<-c(universe_ID,universe_Accession)
   }
 
   #remove duplicates
@@ -783,29 +1103,6 @@ UniProt_KEGG_Fisher<-function(query, universe, organismID="9606", reviewed=TRUE,
     query_ID<-query_ID[!duplicated_ID]
   }
 
-  #check universe
-  if(missing(universe)){
-    print("Your <universe> was missing the global list of ID present in UniProtTable was used as background.")
-    universe<-as.character(t(UniProtTable$Uniprot_ID))
-  }
-
-  #check how many of the universe are in the lists UniProtTable
-  universe_ID <- universe[universe %in% UniProtTable$Uniprot_ID]
-  universe_Accession <- universe[universe %in% UniProtTable$Uniprot_Accession]
-
-  print(paste0("Your universe contained ", length(universe_ID), " UniProt_IDs and ", length(universe_Accession), " UniProt_Accession (some might be redundant)." ))
-
-  #if no values in the UniProtTable stop
-  if (length(universe_ID)==0&&length(universe_Accession)==0){stop("Your <universe> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your universe is present in the UniProtTable.")}
-
-  #convert uniprot_Accession in Uniprot
-  if(length(universe_Accession)>0){
-    print("The uniprot_Accession of your universe were converted in Uniprot_IDs.")
-    universe_Accession<- as.character(t(UniProtTable[match(universe_Accession,UniProtTable$Uniprot_Accession),2]))
-    universe_ID<-c(universe_ID,universe_Accession)
-  }
-
-  #remove duplicates
   duplicated_ID<-duplicated(universe_ID)
   if(sum(duplicated_ID)>0){
     print(paste0("Your list of Uniprot_IDs was containing ", sum(duplicated_ID)," duplicated value(s), duplicates were removed, the universe now comprises ", length(universe_ID)-sum(duplicated_ID), " unique IDs."))
@@ -813,267 +1110,50 @@ UniProt_KEGG_Fisher<-function(query, universe, organismID="9606", reviewed=TRUE,
   }
 
   #check if the universe contains all the proteins from the query
-  if(sum(is.na(match(query_ID,universe_ID)))>0){stop("Your <universe> does not comprises all the IDs present in your <query>")}
-
-  #generate the UniProtTable_KEGG for the query and the universe
-  UPT_KEGG_query <- UPT_KEGG[UPT_KEGG$Uniprot_ID %in% query_ID,]
-  UPT_KEGG_universe <-UPT_KEGG[UPT_KEGG$Uniprot_ID %in% universe_ID,]
-
-  #create the unique_GO list based on the UPT_GO_query
-  unique_PATH<- unique(UPT_KEGG_query[,4:5])
-
-  #create the Contingencies matrix
-  contingency_list<-list()
-  for (i in 1:nrow(unique_PATH)){
-    contingency_list[[i]]<-matrix(ncol=2,nrow=2)
-    contingency_list[[i]][1,1]<- sum(UPT_KEGG_query[,4]==unique_PATH[i,1])
-    contingency_list[[i]][1,2]<- sum(UPT_KEGG_universe[,4]==unique_PATH[i,1])
-    contingency_list[[i]][2,1]<- length(query_ID)-contingency_list[[i]][1,1]
-    contingency_list[[i]][2,2]<- length(universe)-contingency_list[[i]][1,2]
-  }
-  names(contingency_list)<-unique_PATH[,1]
-
-  #create Final table
-  fisher_results<-data.frame(matrix(NA, nrow=nrow(unique_PATH), ncol=11))
-  colnames(fisher_results)<- c("Ontology_type","Ontology_accession","Ongology_description","Count_query","Count_universe","%_query","%_universe","pval","adjpval","fold_change","Proteins_in_query")
-  fisher_results[,2:3]<-unique_PATH[,1:2]
-
-  #run the test and populate the table
-  for (i in 1:nrow(unique_PATH)){
-    fisher_results$`Ontology_type`[i]<-"KEGG"
-    test<-fisher.test(contingency_list[[i]])
-    fisher_results$pval[i]<-test$p.value
-    fisher_results$adjpval[i]<-p.adjust(fisher_results$pval[i] , method = "BH", nrow(unique_PATH))
-    fisher_results$Count_query[i]<- paste0(contingency_list[[i]][1,1],"/",length(query_ID))
-    fisher_results$Count_universe[i]<- paste0(contingency_list[[i]][1,2],"/",length(universe_ID))
-    fisher_results$`%_query` [i]<- contingency_list[[i]][1,1]/length(query_ID)*100
-    fisher_results$`%_universe`[i]<- contingency_list[[i]][1,2]/length(universe_ID)*100
-    fisher_results$fold_change[i]<- fisher_results$`%_query`[i]/fisher_results$`%_universe`[i]
-    fisher_results$Proteins_in_query[i]<-paste(UPT_KEGG_query[UPT_KEGG_query$Pathway_ID==fisher_results$Ontology_accession[i],]$Uniprot_ID,collapse =";")
-  }
-
-  fisher_results[order(fisher_results$pval),]
-}
-
-#' UniProt_KEGG_Fisher()
-#' @description Allows to use UniprotDB and KEGG db information to perform a modified FisherExact test corresponding to the one performed by the DAVID Bioinformatics tool for enrichment analysis.
-#' @param query should be a character vector corresponding to a query list (UniProt_Accession or UniProt_ID)
-#' @param universe should be a character vector corresponding to a universe list (Uniprot Entry), if missing the all table from the UniProtTable will be used as universe
-#' @param organismID Should be a UniProt organism ID, by default Homo sapiens will be used ("9606")
-#' @param reviewed this indicate if the proteins extracted have to be reviewed or not (typically the ones present on swissProt), by default TRUE (the non reviewed proteins are discarded)
-#' @param preloaded_UniProtTable this indicate wether or not the preloaded UniProtTable and UniProtTable_GO should be used, if FALSE the UniProtTable and UniProtTable_GO will be generated again
-#'
-#' @return a data.frame containing enrichment results
-#'
-#' @examples UniProtGOfisher(QueryExample, UniverseExample, organism.id=organismExample)
-#'
-
-UniProt_KEGG_EASE<-function(query, universe, organismID="9606", reviewed=TRUE, preloaded_UniProtTable=TRUE){
-  #general checkings
-  if(missing(organismID)){organismID<-"9606"}
-  if(missing(reviewed)){reviewed<-TRUE}
-  if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
-  if(missing(preloaded_UniProtTable)){preloaded_UniProtTable<-TRUE}
-  if(!is.logical(preloaded_UniProtTable)){stop("<preloaded_UniProtTable> should be either TRUE or FALSE")}
-
-  #load the UniProtTable and UniProtTable_GO (not if it is preloaded)
-  if(preloaded_UniProtTable==TRUE&&exists("UniProtTable")){
-    UPT<- UniProtTable
-  }else {download_UniProtTable(organismID=organismID,reviewed=reviewed)}
-
-  if(preloaded_UniProtTable==TRUE&&exists("UniProtTable_KEGG")){
-    UPT_KEGG<- UniProtTable_KEGG
-  }else {generate_UniProtTable_KEGG(organismID=organismID,reviewed=reviewed,preloaded_UniProtTable==TRUE)}
-
-  #check query
-  if(missing(query)){stop("Your <query> is missing")}
-
-  #check how many of the query are in the lists UniProtTable
-  query_ID <- query[query %in% UniProtTable$Uniprot_ID]
-  query_Accession <- query[query %in% UniProtTable$Uniprot_Accession]
-
-  print(paste0("Your <query> contained ", length(query_ID), " UniProt_IDs and ", length(query_Accession), " UniProt_Accession (some might be redundant)." ))
-
-  #if no values in the UniProtTable stop
-  if (length(query_ID)==0&&length(query_Accession)==0){stop("Your <query> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your query is present in the UniProtTable.")}
-
-  #convert uniprot_Accession in Uniprot
-  if(length(query_Accession)>0){
-    print("The uniprot_Accession of your query were converted in Uniprot_IDs.")
-    query_Accession<- as.character(t(UniProtTable[match(query_Accession,UniProtTable$Uniprot_Accession),2]))
-    query_ID<-c(query_ID,query_Accession)
-  }
-
-  #remove duplicates
-  duplicated_ID<-duplicated(query_ID)
-  if(sum(duplicated_ID)>0){
-    print(paste0("Your list of Uniprot_IDs was containing ", sum(duplicated_ID)," duplicated value(s), duplicates were removed, the query now comprises ", length(query_ID)-sum(duplicated_ID), " unique IDs."))
-    query_ID<-query_ID[!duplicated_ID]
-  }
-
-  #check universe
-  if(missing(universe)){
-    print("Your <universe> was missing the global list of ID present in UniProtTable was used as background.")
-    universe<-as.character(t(UniProtTable$Uniprot_ID))
-  }
-
-  #check how many of the universe are in the lists UniProtTable
-  universe_ID <- universe[universe %in% UniProtTable$Uniprot_ID]
-  universe_Accession <- universe[universe %in% UniProtTable$Uniprot_Accession]
-
-  print(paste0("Your universe contained ", length(universe_ID), " UniProt_IDs and ", length(universe_Accession), " UniProt_Accession (some might be redundant)." ))
-
-  #if no values in the UniProtTable stop
-  if (length(universe_ID)==0&&length(universe_Accession)==0){stop("Your <universe> should be Uniprot_IDs or a Uniprot_Accessions, ensure that the organism of your universe is present in the UniProtTable.")}
-
-  #convert uniprot_Accession in Uniprot
-  if(length(universe_Accession)>0){
-    print("The uniprot_Accession of your universe were converted in Uniprot_IDs.")
-    universe_Accession<- as.character(t(UniProtTable[match(universe_Accession,UniProtTable$Uniprot_Accession),2]))
-    universe_ID<-c(universe_ID,universe_Accession)
-  }
-
-  #remove duplicates
-  duplicated_ID<-duplicated(universe_ID)
-  if(sum(duplicated_ID)>0){
-    print(paste0("Your list of Uniprot_IDs was containing ", sum(duplicated_ID)," duplicated value(s), duplicates were removed, the universe now comprises ", length(universe_ID)-sum(duplicated_ID), " unique IDs."))
-    universe_ID<-universe_ID[!duplicated_ID]
-  }
-
-  #check if the universe contains all the proteins from the query
-  if(sum(is.na(match(query_ID,universe_ID)))>0){stop("Your <universe> does not comprises all the IDs present in your <query>")}
-
-  #generate the UniProtTable_KEGG for the query and the universe
-  UPT_KEGG_query <- UPT_KEGG[UPT_KEGG$Uniprot_ID %in% query_ID,]
-  UPT_KEGG_universe <-UPT_KEGG[UPT_KEGG$Uniprot_ID %in% universe_ID,]
-
-  #create the unique_GO list based on the UPT_GO_query
-  unique_PATH<- unique(UPT_KEGG_query[,4:5])
-
-  #create the Contingencies matrix
-  contingency_list<-list()
-  for (i in 1:nrow(unique_PATH)){
-    contingency_list[[i]]<-matrix(ncol=2,nrow=2)
-    contingency_list[[i]][1,1]<- sum(UPT_KEGG_query[,4]==unique_PATH[i,1])-1
-    contingency_list[[i]][1,2]<- sum(UPT_KEGG_universe[,4]==unique_PATH[i,1])
-    contingency_list[[i]][2,1]<- length(query_ID)-contingency_list[[i]][1,1]
-    contingency_list[[i]][2,2]<- length(universe)-contingency_list[[i]][1,2]
-  }
-  names(contingency_list)<-unique_PATH[,1]
-
-  #create Final table
-  fisher_results<-data.frame(matrix(NA, nrow=nrow(unique_PATH), ncol=11))
-  colnames(fisher_results)<- c("Ontology_type","Ontology_accession","Ongology_description","Count_query","Count_universe","%_query","%_universe","pval","adjpval","fold_change","Proteins_in_query")
-  fisher_results[,2:3]<-unique_PATH[,1:2]
-
-  #run the test and populate the table
-  for (i in 1:nrow(unique_PATH)){
-    fisher_results$`Ontology_type`[i]<-"KEGG"
-    test<-fisher.test(contingency_list[[i]])
-    fisher_results$pval[i]<-test$p.value
-    fisher_results$adjpval[i]<-p.adjust(fisher_results$pval[i] , method = "BH", nrow(unique_PATH))
-    fisher_results$Count_query[i]<- paste0(contingency_list[[i]][1,1],"/",length(query_ID))
-    fisher_results$Count_universe[i]<- paste0(contingency_list[[i]][1,2],"/",length(universe_ID))
-    fisher_results$`%_query` [i]<- contingency_list[[i]][1,1]/length(query_ID)*100
-    fisher_results$`%_universe`[i]<- contingency_list[[i]][1,2]/length(universe_ID)*100
-    fisher_results$fold_change[i]<- fisher_results$`%_query`[i]/fisher_results$`%_universe`[i]
-    fisher_results$Proteins_in_query[i]<-paste(UPT_KEGG_query[UPT_KEGG_query$Pathway_ID==fisher_results$Ontology_accession[i],]$Uniprot_ID,collapse =";")
-  }
-
-  fisher_results[order(fisher_results$pval),]
-}
-
-
-
-#' CustomDB_Fisher()
-#' @description Allows to perform enrichment analysis from a custom database using a query list, a universe list and an annotation table (containing the identifiers and associated ontology terms)
-#' @param query should be a character vector corresponding to a query list (UniProt_Accession or UniProt_ID)
-#' @param universe should be a character vector corresponding to a universe list (Uniprot Entry), if missing the all table from the UniProtTable will be used as universe
-#' @param custom_db should be a data.frame containing at least 2 columns one with the identifiers matching to the query/universe identifiers and one containing the associated ontology terms/groups. For each ID multiple ontology terms can be associated, multiple rows containing the same ID and different ontology terms should be present.
-#' @param id_colname character vector corresponding to the colname of the column to use for the ids
-#' @param ontology_colname
-#'
-#' @return a data.frame containing enrichment results
-#'
-#' @examples UniProtGOfisher(QueryExample, UniverseExample, organism.id=organismExample)
-#'
-CustomDB_Fisher<-function(query, universe, custom_db, id_colname, ontology_colname){
-  #general checkings
-  if(missing(query)){stop("Your <query> is missing.")}
-  if(missing(universe)){stop("Your <universe> is missing.")}
-  if(missing(custom_db)){stop("Your <custom_db> is missing.")}
-  if(!is.character(query)){stop("Your <query> should be a character vector")}
-  if(!is.character(universe)){stop("Your <universe> should be a character vector")}
-  if(sum(query %in% universe)!= length(query)){stop("Not all the IDs present in the <query> are in the <universe> list")}
-  if(missing(id_colname)){
-    warning("Your <id_colname> is missing the first column will be used as id column")
-    id_colname<-colnames(custom_db)[1]
-    }
-  if(missing(ontology_colname)){
-    warning("Your <ontology_colname> is missing the second column will be used as id column")
-    ontology_colname<-colnames(custom_db)[2]
-  }
-
-  #remove duplicates
-  duplicated_query<-duplicated(query)
-  if(sum(duplicated_query)>0){
-    print(paste0("Your <query> list  was containing ", sum(duplicated_query)," duplicated IDs, duplicates were removed, the query now comprises ", length(query_ID)-sum(duplicated_ID), " unique IDs."))
-    query<-query[!duplicated_query]
-  }
-
-  duplicated_universe<-duplicated(universe)
-  if(sum(duplicated_universe)>0){
-    print(paste0("Your <universe> list  was containing ", sum(duplicated_ID)," duplicated IDs, duplicates were removed, the query now comprises ", length(query_ID)-sum(duplicated_ID), " unique IDs."))
-    universe<-universe[!duplicated_universe]
-  }
-
-  duplicated_ontologies<-duplicated(paste0(custom_db[,colnames(custom_db)==id_colname],"@",custom_db[,colnames(custom_db)==ontology_colname]))
-  if(sum(duplicated_ontologies)>0){
-    print(paste0("Your <custom_db> list  was containing ", sum(duplicated_ontologies)," duplicated IDs/ontology pairs. Duplicates were removed, it now comprises ", nrow(custom_db)-sum(duplicated_ontologies), " unique IDs."))
-    custom_db<-custom_db[!duplicated_ontologies,]
-  }
-
-
-  #check how many of the universe IDs are in the custom_db
-  universe_in_custom_db <- universe[universe %in% custom_db[,colnames(custom_db)==id_colname]]
-
+  if(sum(is.na(match(query_ID,universe_ID)))>0){warning("Your <universe> does not comprises all the IDs present in your <query>")}
 
   #generate the UniProtTable_GO for the query and the universe
-  ontology_query <- custom_db[custom_db[,colnames(custom_db)==id_colname] %in% query,]
-  ontology_universe <- custom_db[custom_db[,colnames(custom_db)==id_colname] %in% universe,]
+  UPT_KEGG_query <- UPT_KEGG[UPT_KEGG$Uniprot_ID %in% query_ID,]
+  UPT_KEGG_universe <-UPT_KEGG[UPT_KEGG$Uniprot_ID %in% universe_ID,]
 
-  #create the unique_GO list based on the UPT_GO_query
-  unique_ontologies<- unique(as.character(t(ontology_query[,colnames(ontology_query)==ontology_colname])))
+  #create the unique_KEGG list based on the UPT_KEGG_query
+  unique_KEGG<- unique(UPT_KEGG_query[,4:5])
+  unique_KEGG<- unique_KEGG[!is.na(unique_KEGG$Pathway_ID),]
 
   #create the Contingencies matrix
   contingency_list<-list()
-  for (i in 1:length(unique_ontologies)){
+  for (i in 1:nrow(unique_KEGG)){
     contingency_list[[i]]<-matrix(ncol=2,nrow=2)
-    contingency_list[[i]][1,1]<- sum(as.character(t(ontology_query[,colnames(ontology_query)==ontology_colname]))==unique_ontologies[i])
-    contingency_list[[i]][1,2]<- sum(as.character(t(ontology_universe[,colnames(ontology_universe)==ontology_colname]))==unique_ontologies[i])
-    contingency_list[[i]][2,1]<- length(query)-contingency_list[[i]][1,1]
+    contingency_list[[i]][1,1]<- sum(UPT_KEGG_query[,4]==unique_KEGG[i,1])-1
+    contingency_list[[i]][1,2]<- sum(UPT_KEGG_universe[,4]==unique_KEGG[i,1])
+    contingency_list[[i]][2,1]<- length(query_ID)-contingency_list[[i]][1,1]
     contingency_list[[i]][2,2]<- length(universe)-contingency_list[[i]][1,2]
   }
-  names(contingency_list)<-unique_ontologies
+  names(contingency_list)<-unique_KEGG[,1]
 
   #create Final table
-  fisher_results<-data.frame(matrix(NA, nrow=length(unique_ontologies), ncol=9))
-  colnames(fisher_results)<- c("Ontology_accession","Count_query","Count_universe","%_query","%_universe","pval","adjpval","fold_change","IDs_in_query")
-  fisher_results[,1]<-unique_ontologies
+  fisher_results<-data.frame(matrix(NA, nrow=nrow(unique_KEGG), ncol=13))
+  colnames(fisher_results)<- c("Category","Term_accession","Term_description","Count_query","Pop_query","Count_universe","Pop_universe","%_query","%_universe","pval","adjpval","fold_change","Proteins_in_query")
+  fisher_results$Category<-"KEGG_pathway"
+  fisher_results$Term_accession<-unique_KEGG$Pathway_ID
+  fisher_results$Term_description<-unique_KEGG$Pathway_name
+  fisher_results$Pop_query<-rep(length(query_ID),nrow(fisher_results))
+  fisher_results$Pop_universe<-rep(length(universe_ID),nrow(fisher_results))
 
   #run the test and populate the table
-  for (i in 1:nrow(fisher_results)){
+  for (i in 1:nrow(unique_KEGG)){
     test<-fisher.test(contingency_list[[i]])
     fisher_results$pval[i]<-test$p.value
-    fisher_results$adjpval[i]<-p.adjust(fisher_results$pval[i] , method = "BH", length(unique_ontologies))
-    fisher_results$Count_query[i]<- paste0(contingency_list[[i]][1,1],"/",length(query))
-    fisher_results$Count_universe[i]<- paste0(contingency_list[[i]][1,2],"/",length(universe))
-    fisher_results$`%_query` [i]<- contingency_list[[i]][1,1]/length(query)*100
-    fisher_results$`%_universe`[i]<- contingency_list[[i]][1,2]/length(universe)*100
+    fisher_results$Count_query[i]<-contingency_list[[i]][1,1]+1
+    fisher_results$Count_universe[i]<-contingency_list[[i]][1,2]
+    fisher_results$`%_query` [i]<- contingency_list[[i]][1,1]/length(query_ID)*100
+    fisher_results$`%_universe`[i]<- contingency_list[[i]][1,2]/length(universe_ID)*100
     fisher_results$fold_change[i]<- fisher_results$`%_query`[i]/fisher_results$`%_universe`[i]
-    fisher_results$IDs_in_query[i]<-paste(ontology_query[ontology_query[,colnames(ontology_query)==ontology_colname]==unique_ontologies[i],colnames(ontology_query)==id_colname],collapse =";")
+    fisher_results$Proteins_in_query[i]<-paste(UPT_KEGG_query[UPT_KEGG_query$KEGG_ID==fisher_results$Term_accession[i],]$Uniprot_ID,collapse =";")
   }
 
   fisher_results<-fisher_results[order(fisher_results$pval),]
+  fisher_results$adjpval<-p.adjust(fisher_results$pval)
+  return(fisher_results)
 }
 
