@@ -2,7 +2,7 @@
 % Please edit documentation in R/1_Proteinminion-functions.R
 \name{UniProt_KEGG_EASE}
 \alias{UniProt_KEGG_EASE}
-\title{UniProt_KEGG_Fisher()}
+\title{UniProt_KEGG_EASE()}
 \usage{
 UniProt_KEGG_EASE(
   query,

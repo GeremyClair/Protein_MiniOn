@@ -17,13 +17,13 @@ generate_UniProtTable_KEGG(
 
 \item{reviewed}{this indicate if the proteins extracted have to be reviewed or not (typically the ones present on swissProt), by default TRUE (the non reviewed proteins are discarded)}
 
-\item{preloaded_UniProtTable}{this indicate wether or not the preloaded UniProtTable and UniProtTable_GO should be used, if FALSE the UniProtTable and UniProtTable_GO will be generated again}
+\item{preloaded_UniProtTable}{this indicate whether or not the preloaded UniProtTable and UniProtTable_GO should be used, if FALSE the UniProtTable and UniProtTable_GO will be generated again}
 }
 \value{
 This function generate a KEGG enrichment table named UniProtTable_KEGG usable with the enrichment functions Uniprot_KEGG_*. If the export is set on, the UniProtTable_KEGG will also be saved in the .rda format at the specified location.
 }
 \description{
-Retrieve UniProt GOterms for the proteins of a given organism
+Retrieve UniProt KEGG pathways for the proteins of a given organism
 }
 \examples{
 generate_UniProtTable_KEGG(organismID="9606",reviewed=TRUE,preloaded_UniProtTable=TRUE,export=FALSE,file="UniProtTable_KEGG_organismID_date.rda")
