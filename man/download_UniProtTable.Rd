@@ -27,7 +27,3 @@ This function returns a data.frame named UniProtTable containing the detail on t
 \description{
 Retrieve UniProt info for the proteins of a given organism.
 }
-\examples{
-download_UniProtTable(organismID="9606", reviewed=TRUE, export=FALSE, file="UniProtTable_organismID_date.txt")
-
-}

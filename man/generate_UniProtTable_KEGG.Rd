@@ -25,7 +25,3 @@ This function generate a KEGG enrichment table named UniProtTable_KEGG usable wi
 \description{
 Retrieve UniProt KEGG pathways for the proteins of a given organism
 }
-\examples{
-generate_UniProtTable_KEGG(organismID="9606",reviewed=TRUE,preloaded_UniProtTable=TRUE,export=FALSE,file="UniProtTable_KEGG_organismID_date.rda")
-
-}

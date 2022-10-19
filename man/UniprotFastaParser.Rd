@@ -15,7 +15,3 @@ a data.frame containing enrichment results
 \description{
 allow to extract the information from a fasta file in a table format
 }
-\examples{
-UniProtGOfisher(QueryExample, UniverseExample, organism.id=organismExample)
-
-}

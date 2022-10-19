@@ -8,7 +8,7 @@ allows to perform proteinMinion enrichments directly on a romics_object. The Que
 romicsEnrichement(
   romics_object,
   organismID = "9606",
-  type = c("GO", "KEGG"),
+  type = c("GO", "KEGG", "REACTOME"),
   ANOVA_filter = c("none", "p", "padj"),
   p = 0.05,
   cluster_filter = "none",
@@ -18,6 +18,7 @@ romicsEnrichement(
   statCol_text2 = "<=0.05",
   statCol_filter3 = "none",
   statCol_text3 = "<=0.05",
+  enrichment_function = c("Fisher", "EASE"),
   ...
 )
 }

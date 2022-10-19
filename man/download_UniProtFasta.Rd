@@ -29,7 +29,3 @@ This function returns a data.frame named UniProtFasta containing the detail on t
 \description{
 Retrieve UniProt fasta file for a given organism
 }
-\examples{
-download_UniProtFasta(organismID="9606", reviewed=TRUE, export=TRUE,file="UniProtFasta_organismID_date.fasta")
-
-}

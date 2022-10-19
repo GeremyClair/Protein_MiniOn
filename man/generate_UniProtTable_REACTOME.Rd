@@ -25,7 +25,3 @@ This function generate a reactome table
 \description{
 Retrieve UniProt Reactome pathways for the proteins of a given organism
 }
-\examples{
-generate_UniProtTable_REACTOME(organismID="9606",reviewed=TRUE,preloaded_UniProtTable=TRUE,export=FALSE,file="UniProtTable_KEGG_organismID_date.rda")
-
-}

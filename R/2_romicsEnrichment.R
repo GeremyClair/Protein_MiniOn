@@ -11,7 +11,7 @@
 #' @author Geremy Clair
 #' @export
 #'
-romicsEnrichement<-function(romics_object, organismID="9606", type= c("GO", "KEGG"), ANOVA_filter= c("none", "p", "padj"), p = 0.05,  cluster_filter="none",statCol_filter="none", statCol_text="<=0.05", statCol_filter2="none", statCol_text2="<=0.05", statCol_filter3="none", statCol_text3="<=0.05", ...){
+romicsEnrichement<-function(romics_object, organismID="9606", type= c("GO", "KEGG","REACTOME"), ANOVA_filter= c("none", "p", "padj"), p = 0.05,  cluster_filter="none",statCol_filter="none", statCol_text="<=0.05", statCol_filter2="none", statCol_text2="<=0.05", statCol_filter3="none", statCol_text3="<=0.05", enrichment_function="EASE", ...){
   if(!is.romics_object(romics_object) | missing(romics_object)) {stop("romics_object is missing or is not in the appropriate format")}
   if(missing(ANOVA_filter)){ANOVA_filter="none"}
   if(!ANOVA_filter %in% c("none","p","padj")){stop("Your ANOVA filter should be either none, p or padj")}
@@ -26,9 +26,11 @@ romicsEnrichement<-function(romics_object, organismID="9606", type= c("GO", "KEG
   if(missing(statCol_filter3)){statCol_filter3="none"}
   if(!statCol_filter3 %in% c("none",romicsCalculatedStats(romics_object))){stop("<statCol_filter3> is not a calculated stat column of the romics_object. Use the function romicsCalculatedStats() to identify the usable columns.")}
   if(is.null(romics_object$statistics)){stop("your romics_object does not contain a statistical layer")}
-  if(missing(type)){type= c("KEGG", "GO")}
-  if(sum(type %in% c("KEGG", "GO"))!=length(type)){stop("<type> has to be c('GO','KEGG'), 'KEGG', or 'GO'")}
+  if(missing(type)){type= c("KEGG", "GO","REACTOME")}
+  if(sum(type %in% c("KEGG", "GO","REACTOME"))!=length(type)){stop("<type> has to be c('GO','KEGG','REACTOME'), or to contain 'KEGG', 'REACTOME', or 'GO'")}
   if(sum(c(ANOVA_filter, statCol_filter, statCol_filter, statCol_filter)!="none")>1 & cluster_filter!="none"){stop("this function cannot do simultaneously a cluster filter AND an other type of statistic filter please either set cluster_filter to 'none' or all the other filters to 'none'.")}
+  if(missing(enrichment_function)){enrichment_function<-"EASE"}
+  if(enrichment_function %in% c("EASE","Fisher")){stop("<enrichment_function> has to be either 'EASE' or 'Fisher'")}
 
   data<-romics_object$data
   statistics<-romics_object$statistics

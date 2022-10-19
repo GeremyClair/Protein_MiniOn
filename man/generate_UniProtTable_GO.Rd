@@ -25,7 +25,3 @@ This file return a data.frame named UniProtTable_GO containing the list of GOs a
 \description{
 Retrieve UniProt GOterms for the proteins of a given organism
 }
-\examples{
-generate_UniProtTable_GO(organismID="9606",reviewed=TRUE,preloaded_UniProtTable=TRUE,export=TRUE,file="UniProtTable_GO_organismID_date.rda")
-
-}

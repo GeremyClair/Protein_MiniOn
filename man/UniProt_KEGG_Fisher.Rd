@@ -29,7 +29,3 @@ a data.frame containing enrichment results
 \description{
 Allows to use UniprotDB and KEGG db information to perform a FisherExact test for enrichment analysis
 }
-\examples{
-UniProtGOfisher(QueryExample, UniverseExample, organism.id=organismExample)
-
-}
