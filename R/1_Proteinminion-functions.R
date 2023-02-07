@@ -337,6 +337,7 @@ generate_UniProtTable_KEGG<- function(organismID="9606",reviewed=TRUE,preloaded_
 
   #now merge the table with the other info from the UniProtTable_KEGG table
   UniProtTable_KEGG<-merge(KEGG_path_ID,UniProtTable_KEGG, by="KEGG_ID")
+  UniProtTable_KEGG<-unique(UniProtTable_KEGG)
 
   #Place the reordered table in the Global Environment
   UniProtTable_KEGG <<- UniProtTable_KEGG[,c(4,5,1,2,3)]
@@ -425,6 +426,7 @@ if(missing(preloaded_UniProtTable)){preloaded_UniProtTable<-TRUE}
                                Uniprot_ID=UniProtTable_REACTOME$Uniprot_ID,
                                REACTOME_ID=UniProtTable_REACTOME$REACTOME_ID,
                                REACTOME_description=UniProtTable_REACTOME$REACTOME_description)
+  UniProtTable_REACTOME<-unique(UniProtTable_REACTOME)
 
   #Place the reordered table in the Global Environment
   UniProtTable_REACTOME <<- UniProtTable_REACTOME
