@@ -30,7 +30,7 @@ romicsEnrichement<-function(romics_object, organismID="9606", type= c("GO", "KEG
   if(sum(type %in% c("KEGG", "GO","REACTOME"))!=length(type)){stop("<type> has to be c('GO','KEGG','REACTOME'), or to contain 'KEGG', 'REACTOME', or 'GO'")}
   if(sum(c(ANOVA_filter, statCol_filter, statCol_filter, statCol_filter)!="none")>1 & cluster_filter!="none"){stop("this function cannot do simultaneously a cluster filter AND an other type of statistic filter please either set cluster_filter to 'none' or all the other filters to 'none'.")}
   if(missing(enrichment_function)){enrichment_function<-"EASE"}
-  if(enrichment_function %in% c("EASE","Fisher")){stop("<enrichment_function> has to be either 'EASE' or 'Fisher'")}
+  if(!enrichment_function %in% c("EASE","Fisher")){stop("<enrichment_function> has to be either 'EASE' or 'Fisher'")}
 
   data<-romics_object$data
   statistics<-romics_object$statistics
@@ -76,6 +76,7 @@ romicsEnrichement<-function(romics_object, organismID="9606", type= c("GO", "KEG
       message("the following filter was applied:")
       message(text)
       test<-eval(parse(text=text))
+      test[is.na(test)]<-FALSE
       if(!is.logical(test) | length(test)!= nrow(statistics)){
         message("The result of following test is not a logical vector of the same length as the dataset :")
         message(test)
@@ -83,6 +84,7 @@ romicsEnrichement<-function(romics_object, organismID="9606", type= c("GO", "KEG
       data <- data[test,]
       statistics <-statistics[test,]
       groups[[1]]<-rownames(data)
+      names(groups)[1]<-text
       }}}
 
   if(statCol_filter2!="none"){
@@ -93,6 +95,7 @@ romicsEnrichement<-function(romics_object, organismID="9606", type= c("GO", "KEG
       message("the following filter was applied:")
       message(text)
       test<-eval(parse(text=text))
+      test[is.na(test)]<-FALSE
       if(!is.logical(test) | length(test)!= nrow(statistics)){
         message("The result of following test is not a logical vector of the same length as the dataset :")
         message(test)
@@ -100,7 +103,8 @@ romicsEnrichement<-function(romics_object, organismID="9606", type= c("GO", "KEG
         data <- data[test,]
         statistics <-statistics[test,]
         groups[[1]]<-rownames(data)
-      }}}
+        names(groups)[1]<-paste0(names(groups)[1]," & ",text)
+              }}}
 
   if(statCol_filter3!="none"){
     if(missing(statCol_text3)){
@@ -110,6 +114,7 @@ romicsEnrichement<-function(romics_object, organismID="9606", type= c("GO", "KEG
       message("the following filter was applied:")
       message(text)
       test<-eval(parse(text=text))
+      test[is.na(test)]<-FALSE
       if(!is.logical(test) | length(test)!= nrow(statistics)){
         message("The result of following test is not a logical vector of the same length as the dataset :")
         message(test)
@@ -117,7 +122,8 @@ romicsEnrichement<-function(romics_object, organismID="9606", type= c("GO", "KEG
         data <- data[test,]
         statistics <-statistics[test,]
         groups[[1]]<-rownames(data)
-      }}}
+        names(groups)[1]<-paste0(names(groups)[1]," & ",text)
+        }}}
 
   #if cluster column
   if (cluster_filter!="none"){
@@ -130,6 +136,7 @@ romicsEnrichement<-function(romics_object, organismID="9606", type= c("GO", "KEG
     }
   }
 
+  if(enrichment_function=="Fisher"){
   #create an enrichment result table
   enrichment_results<-data.frame(matrix(ncol=12,nrow=0))
 
@@ -149,7 +156,42 @@ romicsEnrichement<-function(romics_object, organismID="9606", type= c("GO", "KEG
       enrichment_results<-rbind(enrichment_results,enrichment_table)
       }
 
+    if("REACTOME" %in% type){
+      enrichment_table<-UniProt_REACTOME_Fisher(query,universe,organismID = organismID , ...)
+      enrichment_table<-cbind(enriched_in=names(groups)[i],enrichment_table)
+      enrichment_results<-rbind(enrichment_results,enrichment_table)
+    }
+  }
   }
 
+  if(enrichment_function=="EASE"){
+    #create an enrichment result table
+    enrichment_results<-data.frame(matrix(ncol=12,nrow=0))
+
+    #Enrichments using proteinMinion
+    for (i in 1:length(groups)){
+      query<-as.character(t(groups[[i]]))
+
+      if("GO" %in% type){
+        enrichment_table<-UniProt_GO_EASE(query,universe,organismID = organismID , ...)
+        enrichment_table<-cbind(enriched_in=names(groups)[i],enrichment_table)
+        enrichment_results<-rbind(enrichment_results,enrichment_table)
+      }
+
+      if("KEGG" %in% type){
+        enrichment_table<-UniProt_KEGG_EASE(query,universe,organismID = organismID , ...)
+        enrichment_table<-cbind(enriched_in=names(groups)[i],enrichment_table)
+        enrichment_results<-rbind(enrichment_results,enrichment_table)
+      }
+
+      if("REACTOME" %in% type){
+        enrichment_table<-UniProt_REACTOME_EASE(query,universe,organismID = organismID , ...)
+        enrichment_table<-cbind(enriched_in=names(groups)[i],enrichment_table)
+        enrichment_results<-rbind(enrichment_results,enrichment_table)
+      }
+    }
+  }
+
+
   return(enrichment_results)
-}
+  }
