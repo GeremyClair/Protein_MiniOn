@@ -430,6 +430,7 @@ if(missing(preloaded_UniProtTable)){preloaded_UniProtTable<-TRUE}
                                Uniprot_ID=UniProtTable_REACTOME$Uniprot_ID,
                                REACTOME_ID=UniProtTable_REACTOME$REACTOME_ID,
                                REACTOME_description=UniProtTable_REACTOME$REACTOME_description)
+  UniProtTable_REACTOME<-unique(UniProtTable_REACTOME)
   UniProtTable_REACTOME<-UniProtTable_REACTOME[!duplicated(paste0(UniProtTable_REACTOME$Uniprot_Accession,"@",UniProtTable_REACTOME$REACTOME_ID)),]
   #Place the reordered table in the Global Environment
   UniProtTable_REACTOME <<- UniProtTable_REACTOME
