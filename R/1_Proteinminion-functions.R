@@ -336,7 +336,7 @@ generate_UniProtTable_KEGG<- function(organismID="9606",reviewed=TRUE,preloaded_
     KEGG_path_ID<-rbind(KEGG_path_ID,read.delim(file=paste0(KEGG_URL,"link/pathway/",KEGG_orglist[i]),header=FALSE,col.names = c("KEGG_ID","Pathway_ID")))
     KEGG_path_names<- rbind(KEGG_path_names,read.delim(file=paste0(KEGG_URL,"list/pathway/",KEGG_orglist[i]),header=FALSE,col.names = c("Pathway_ID","Pathway_name")))
     }
-
+  KEGG_path_ID$Pathway_ID <- sub("path:","",KEGG_path_ID$Pathway_ID)
   KEGG_path_ID<-merge(KEGG_path_ID, KEGG_path_names, by = "Pathway_ID")
 
   #now merge the table with the other info from the UniProtTable_KEGG table
@@ -459,16 +459,19 @@ generate_UniProtTables<-function(type=c("GO","KEGG","REACTOME"),organismID="9606
   if(preloaded_UniProtTable==TRUE&&exists("UniProtTable")){
     UPT<- UniProtTable
   }else{
-    #general checking
+
     if(missing(organismID)&missing(proteomeID)){warning("The 'organismID' and 'proteomeID' were left empty, 'homo sapiens' (9006) will be used by default")
       organismID<-"9606"}
+
     if(missing(reviewed)){reviewed<-FALSE}
     if(!is.logical(reviewed)){warning("<reviewed> should be either TRUE or FALSE, by default reviewed=FALSE was used")
       reviewed<- FALSE}
     if(!is.logical(reviewed)){stop("<reviewed> should be either TRUE or FALSE")}
-    #download the table
-    download_UniProtTable(organismID=organismID, reviewed=reviewed)
 
+    if(missing(proteomeID)){download_UniProtTable(organismID=organismID, reviewed=reviewed)}
+    if(missing(organismID)){download_UniProtTable(proteomeID = proteomeID, reviewed=reviewed)}else{
+      download_UniProtTable(organismID=organismID,proteomeID = proteomeID, reviewed=reviewed)
+    }
   }
 
   if("GO" %in% type){
