@@ -1,11 +1,14 @@
 Package: proteinminion
 Type: Package
 Title: Protein MiniOn : Protein Ontology mining and Enrichment Tool.
-Version: 0.2.0
+Version: 0.3.0
 Author: Geremy Clair
 Maintainer: The package maintainer <geremy.clair@pnnl.gov>
 Description: Fetch protein information from UniProt and performs enrichment analysis.
-License: What license is it under?
+License: BSD 2
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
+Imports: 
+    tidyr, seqinr
+Depends: tidyr

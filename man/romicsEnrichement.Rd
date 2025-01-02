@@ -18,7 +18,7 @@ romicsEnrichement(
   statCol_text2 = "<=0.05",
   statCol_filter3 = "none",
   statCol_text3 = "<=0.05",
-  enrichment_function = c("Fisher", "EASE"),
+  enrichment_function = "EASE",
   ...
 )
 }

@@ -24,8 +24,11 @@ UniProt_KEGG_KS(
 \item{preloaded_UniProtTable}{this indicate wether or not the preloaded UniProtTable and UniProtTable_KEGG should be used, if FALSE the UniProtTable and UniProtTable_KEGG will be generated again}
 }
 \value{
-a data.frame containing enrichment results from the KEGG retrieve from UniProt.
+a data.frame containing enrichment results.
 }
 \description{
 Allows to use UniprotDB Gene Ontology information to perform a modified FisherExact test corresponding to the one performed by the DAVID Bioinformatics tool for enrichment analysis
+}
+\author{
+Geremy Clair
 }

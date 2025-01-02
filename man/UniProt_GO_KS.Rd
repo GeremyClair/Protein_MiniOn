@@ -29,3 +29,6 @@ a data.frame containing enrichment results from the GO retrieve from UniProt.
 \description{
 Allows to use UniprotDB Gene Ontology information to perform a modified FisherExact test corresponding to the one performed by the DAVID Bioinformatics tool for enrichment analysis
 }
+\author{
+Geremy Clair
+}

@@ -11,14 +11,6 @@ UniProt_REACTOME_KS(
   reviewed = TRUE,
   preloaded_UniProtTable = TRUE
 )
-
-UniProt_REACTOME_KS(
-  rankingTable,
-  order = "ascending",
-  organismID = "9606",
-  reviewed = TRUE,
-  preloaded_UniProtTable = TRUE
-)
 }
 \arguments{
 \item{rankingTable}{should be a two column data.frame containing the Uniprot identifiers list as first column (UniProt_Accession or UniProt_ID) and the ranking values as second column}
@@ -33,11 +25,10 @@ UniProt_REACTOME_KS(
 }
 \value{
 a data.frame containing enrichment results from the GO retrieve from UniProt.
-
-a data.frame containing enrichment results from the GO retrieve from UniProt.
 }
 \description{
 Allows to use UniprotDB REACTOME information to perform a modified FisherExact test corresponding to the one performed by the DAVID Bioinformatics tool for enrichment analysis
-
-Allows to use UniprotDB REACTOME information to perform a modified FisherExact test corresponding to the one performed by the DAVID Bioinformatics tool for enrichment analysis
+}
+\author{
+Geremy Clair
 }

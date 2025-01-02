@@ -24,8 +24,11 @@ UniProt_KEGG_Fisher(
 \item{preloaded_UniProtTable}{this indicate wether or not the preloaded UniProtTable and UniProtTable_GO should be used, if FALSE the UniProtTable and UniProtTable_GO will be generated again}
 }
 \value{
-a data.frame containing enrichment results
+a data.frame containing enrichment results.
 }
 \description{
 Allows to use UniprotDB and KEGG db information to perform a FisherExact test for enrichment analysis
+}
+\author{
+Geremy Clair
 }
